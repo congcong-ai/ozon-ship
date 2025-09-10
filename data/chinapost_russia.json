@@ -1,0 +1,143 @@
+{
+  "origin": "China",
+  "destination": "Russia",
+  "default_currency": "CNY",
+  "services": [
+    {
+      "id": "chinapost_pudo_standard_air",
+      "group": "China Post to PUDO",
+      "name": "China Post to PUDO Standard",
+      "mode": "air",
+      "weight": { "min_g": 1, "max_g": 500, "increment_g": 1 },
+      "dimensions_max": "三边之和≤90cm，最长边≤60cm",
+      "value_limit": { "currency": "RUB", "amount": 1500 },
+      "prohibited": ["含电池产品", "液体及易燃物（清漆、烟雾剂、打火机等）"],
+      "compensation": "丢失或损坏不赔偿",
+      "pricing": {
+        "type": "base_plus_per_gram",
+        "base_cny": 1.9,
+        "per_gram_cny": 0.065
+      },
+      "notes": ["运费按实际重量计算，无额外系数", "计费单位为每1克"]
+    },
+    {
+      "id": "chinapost_pudo_economy_land",
+      "group": "China Post to PUDO",
+      "name": "China Post to PUDO Economy",
+      "mode": "land",
+      "weight": { "min_g": 1, "max_g": 500, "increment_g": 1 },
+      "dimensions_max": "三边之和≤90cm，最长边≤60cm",
+      "value_limit": { "currency": "RUB", "amount": 1500 },
+      "prohibited": ["含电池产品", "液体及易燃物（清漆、烟雾剂、打火机等）"],
+      "compensation": "丢失或损坏不赔偿",
+      "pricing": {
+        "type": "base_plus_per_gram",
+        "base_cny": 1.9,
+        "per_gram_cny": 0.026
+      },
+      "notes": ["运费按实际重量计算，无额外系数", "计费单位为每1克"]
+    },
+    {
+      "id": "chinapost_eyoubao_priority",
+      "group": "China Post e邮宝",
+      "name": "China Post e邮宝特邮",
+      "weight": { "min_g": 1, "max_g": 5000, "increment_g": 1 },
+      "dimensions_max": "长+宽+厚≤90cm，最长边≤60cm；圆卷：2×直径+长≤104cm，长≤90cm",
+      "dimensions_min": "长度≥14cm、宽度≥11cm；圆卷：2×直径+长≥17cm，长≥11cm",
+      "pricing": {
+        "type": "registration_plus_per_gram",
+        "registration_fee_cny": 12,
+        "per_gram_cny": 0.095,
+        "effective_from": "2025-07-31"
+      }
+    },
+    {
+      "id": "chinapost_eyoubao",
+      "group": "China Post e邮宝",
+      "name": "China Post e邮宝",
+      "weight": { "min_g": 1, "max_g": 5000, "increment_g": 1 },
+      "dimensions_max": "长+宽+厚≤90cm，最长边≤60cm；圆卷：2×直径+长≤104cm，长≤90cm",
+      "dimensions_min": "长度≥14cm、宽度≥11cm；圆卷：2×直径+长≥17cm，长≥11cm",
+      "pricing": {
+        "type": "registration_plus_per_gram",
+        "registration_fee_cny": 12,
+        "per_gram_cny": 0.06,
+        "effective_from": "2025-07-31"
+      }
+    },
+    {
+      "id": "chinapost_eyoubao_discount",
+      "group": "China Post e邮宝",
+      "name": "China Post e邮宝特惠",
+      "weight": { "min_g": 1, "max_g": 5000, "increment_g": 1 },
+      "dimensions_max": "长+宽+厚≤90cm，最长边≤60cm；圆卷：2×直径+长≤104cm，长≤90cm",
+      "dimensions_min": "长度≥14cm、宽度≥11cm；圆卷：2×直径+长≥17cm，长≥11cm",
+      "pricing": {
+        "type": "registration_plus_per_gram",
+        "registration_fee_cny": 12,
+        "per_gram_cny": 0.0255,
+        "effective_from": "2025-07-31"
+      }
+    },
+    {
+      "id": "chinapost_eparcel_discount",
+      "group": "China Post e包裹特惠",
+      "name": "China Post e包裹特惠",
+      "weight": { "min_g": 500, "max_g": 31000, "increment_g": 500 },
+      "dimensions_max": "长+宽+高<200cm，最长边<105cm",
+      "pricing": {
+        "type": "first_weight_plus_additional",
+        "first_weight_g": 500,
+        "first_weight_fee_cny": 52.5,
+        "additional_step_g": 500,
+        "additional_step_fee_cny": 15
+      },
+      "example": "1235g -> 52.5 + 15×2 = 82.5 CNY"
+    },
+    {
+      "id": "chinapost_express",
+      "group": "China Post e特快",
+      "name": "China Post e特快",
+      "weight": { "min_g": 50, "max_g": 31000, "increment_g": 50 },
+      "dimensions_rules": [
+        "标准1：任一边≤1.5m，两个最大边之和≤3m",
+        "标准2：任一边≤1.05m，两个最大边之和≤2m",
+        "标准3：任一边≤1.05m，两个最大边之和≤2.5m",
+        "标准4：任一边≤1.05m，两个最大边之和≤3m",
+        "标准5：任一边≤1.52m，两个最大边之和≤2.74m"
+      ],
+      "dimensional_weight_rule": {
+        "applies_when": "任一边≥40cm",
+        "formula": "(长cm×宽cm×高cm) ÷ 6000",
+        "unit": "克"
+      },
+      "physical_weight_rule": {
+        "applies_when": "每边长度均<40cm",
+        "measure": "按实际重量"
+      },
+      "pricing": {
+        "type": "first_weight_plus_additional",
+        "first_weight_g": 50,
+        "first_weight_fee_cny": 102,
+        "additional_step_g": 50,
+        "additional_step_fee_cny": 2.55,
+        "effective_from": "2023-09-15"
+      }
+    },
+    {
+      "id": "chinapost_srm_priority",
+      "group": "China Post SRM",
+      "name": "China Post SRM特邮",
+      "weight": { "min_g": 1, "max_g": 2000, "increment_g": 1 },
+      "dimensions_max": "长+宽+厚≤90cm，最长边≤60cm；圆卷：2×直径+长≤104cm，长≤90cm",
+      "dimensions_min": "长度≥14cm、宽度≥11cm；圆卷：2×直径+长≥17cm，长≥11cm",
+      "value_limit": { "currency": "USD", "amount": 10 },
+      "pricing": {
+        "type": "base_plus_per_gram",
+        "base_cny": 7.8,
+        "per_gram_cny": 0.1121
+      },
+      "example": "500g -> 7.80 + 0.1121×500 = 63.85 CNY"
+    }
+  ]
+}

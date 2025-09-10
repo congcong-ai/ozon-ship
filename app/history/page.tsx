@@ -1,0 +1,53 @@
+"use client";
+import { useEffect, useState } from "react";
+
+type HistoryItem = {
+  ts: number;
+  input: { unit: "kg" | "g"; weight: number; dims: { l: number; w: number; h: number } };
+  top: { id: string; name: string; price: number | null }[];
+};
+
+export default function HistoryPage() {
+  const [items, setItems] = useState<HistoryItem[]>([]);
+
+  useEffect(() => {
+    const raw = localStorage.getItem("calc_history");
+    if (raw) {
+      try {
+        setItems(JSON.parse(raw));
+      } catch (e) {}
+    }
+  }, []);
+
+  function clearHistory() {
+    localStorage.removeItem("calc_history");
+    setItems([]);
+  }
+
+  return (
+    <div className="py-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">历史记录</h1>
+        {items.length > 0 && (
+          <button className="text-sm text-red-600 underline" onClick={clearHistory}>清空</button>
+        )}
+      </div>
+      {items.length === 0 ? (
+        <p className="mt-2 text-sm text-muted-foreground">暂无历史。进行一次计算并点击“比较”后将自动记录最近搜索。</p>
+      ) : (
+        <ul className="mt-4 space-y-3">
+          {items.map((h, idx) => (
+            <li key={idx} className="rounded-lg border p-3">
+              <div className="text-sm text-muted-foreground">
+                {new Date(h.ts).toLocaleString()} — 重量 {h.input.weight}{h.input.unit}，尺寸 {h.input.dims.l}×{h.input.dims.w}×{h.input.dims.h} (cm)
+              </div>
+              <div className="mt-2 text-sm">
+                Top：{h.top.map((t) => `${t.name}${t.price != null ? `￥${t.price.toFixed(2)}` : "—"}`).join("， ")}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
