@@ -17,12 +17,12 @@
    ```bash
    pnpm dev   # 或 npm run dev / yarn dev
    ```
-3. 生产构建与启动（同样先杀端口）
+3. 生产构建与启动（同样先杀端口，生产默认 3001）
    ```bash
    pnpm build && pnpm start
    ```
 
-> 端口策略：根据你的工作流要求，`package.json` 的 `dev`/`start` 已内置 `kill :3000` 逻辑。
+> 端口策略：开发 3000、生产 3001；脚本已内置「先杀端口再启动」。
 
 ## 目录结构
 - `app/`：Next.js App Router 代码（`page.tsx` 为主计算页面，`api/services` 读取数据）。
@@ -42,6 +42,29 @@
 
 ## 如何修改渠道与价格数据
 请阅读 `docs/chinapost_data_schema.md`，其中包含字段解释、示例、校验与常见错误排查。
+
+## 一键部署（静态或有后端）
+
+所有部署入口均为根目录的 `deploy.sh`，支持交互或传参：
+
+```bash
+# 纯静态（构建 out/ 并 rsync 到 /var/www/ozon-ship）
+./deploy.sh --mode static
+
+# 配置/更新 Nginx（静态站点）
+./deploy.sh --mode static-nginx
+
+# 有后端（Supervisor）初始化/部署
+./deploy.sh --mode supervisor-bootstrap
+./deploy.sh --mode supervisor
+```
+
+部署变量来自 `.env`（示例见 `.env.example`）：
+- `SERVER`、`SSH_USER`、`STATIC_TARGET_DIR=/var/www/ozon-ship`
+- `APP_DIR=/srv/ozon-ship`、`PROGRAM=ozon-ship`（仅有后端时需要）
+- `DOMAIN=ozon-ship.xixisys.com`
+
+更详细说明见 `docs/deploy/DEPLOYMENT_GUIDE.md`。
 
 ---
 如需新增 UI 或接入数据库，请在 Issue/会话中告知具体需求。

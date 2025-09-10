@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "bash -c 'lsof -ti :3000 | xargs -I {} kill -9 {} 2>/dev/null || true; next dev -p 3000'",
     "build": "next build",
-    "start": "bash -c 'lsof -ti :3000 | xargs -I {} kill -9 {} 2>/dev/null || true; next start -p 3000'",
+    "start": "bash -c 'lsof -ti :3001 | xargs -I {} kill -9 {} 2>/dev/null || true; next start -p 3001'",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init --create-only",
     "prisma:deploy": "prisma migrate deploy"

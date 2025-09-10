@@ -1,6 +1,12 @@
 import { Service, PricingInput, ServiceWithComputed } from "@/types/shipping";
 
 export async function fetchServices(): Promise<Service[]> {
+  // 静态模式：直接从打包进来的 JSON 读取（便于 Next export）
+  if (process.env.NEXT_PUBLIC_USE_STATIC_DATA === "true") {
+    const data = (await import("@/data/chinapost_russia.json")) as any;
+    return (data.services || []) as Service[];
+  }
+  // 动态模式：从 API 读取（需要 Node 运行时）
   const res = await fetch("/api/services", { cache: "no-store" });
   if (!res.ok) throw new Error("failed to load services");
   const json = (await res.json()) as { services: Service[] };
