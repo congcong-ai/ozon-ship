@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ServiceWithComputed } from "@/types/shipping";
 
-export default function ServiceCard({ service, selected, onToggle }: { service: ServiceWithComputed; selected: boolean; onToggle: () => void }) {
+export default function ServiceCard({ service }: { service: ServiceWithComputed }) {
   return (
     <div className="rounded-lg border p-4">
       <div className="flex items-start justify-between gap-2">
@@ -9,10 +9,6 @@ export default function ServiceCard({ service, selected, onToggle }: { service: 
           <h3 className="font-medium leading-tight">{service.name}</h3>
           <p className="text-xs text-muted-foreground">{service.group}</p>
         </div>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={selected} onChange={onToggle} />
-          比较
-        </label>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-sm">

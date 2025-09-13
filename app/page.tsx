@@ -1,17 +1,13 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Calculator, Search } from "lucide-react";
 import { type Service, type PricingInput, type ServiceWithComputed } from "@/types/shipping";
 import { fetchServices, computeForAll } from "@/lib/pricing";
-import { Button } from "@/components/ui/button";
 import ServiceRow from "@/components/service-row";
 
 export default function HomePage() {
-  const router = useRouter();
   const [services, setServices] = useState<Service[]>([]);
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<Record<string, boolean>>({});
 
   const [unit, setUnit] = useState<"kg" | "g">("kg");
   const [weightStr, setWeightStr] = useState<string>(""); // 输入为字符串，避免自动补0
@@ -53,31 +49,6 @@ export default function HomePage() {
       .filter((s) => !q || s.name.toLowerCase().includes(q) || s.group.toLowerCase().includes(q))
       .sort((a, b) => (a.totalPriceCNY ?? Number.MAX_SAFE_INTEGER) - (b.totalPriceCNY ?? Number.MAX_SAFE_INTEGER));
   }, [computed, query]);
-
-  const selectedList = filtered.filter((f) => selected[f.id]);
-
-  function goCompare() {
-    const payload = selectedList.map((s) => ({
-      id: s.id,
-      name: s.name,
-      group: s.group,
-      totalPriceCNY: s.totalPriceCNY,
-      available: s.available,
-      reason: s.reason,
-    }));
-    localStorage.setItem("compare_items", JSON.stringify({
-      ts: Date.now(),
-      input,
-      items: payload,
-    }));
-    // 写入简易历史（最多 50 条）
-    const historyRaw = localStorage.getItem("calc_history");
-    const history = historyRaw ? JSON.parse(historyRaw) : [];
-    history.unshift({ ts: Date.now(), input, top: filtered.slice(0, 5).map((x) => ({ id: x.id, name: x.name, price: x.totalPriceCNY })) });
-    while (history.length > 50) history.pop();
-    localStorage.setItem("calc_history", JSON.stringify(history));
-    router.push("/compare");
-  }
 
   return (
     <div className="py-6">
@@ -163,19 +134,11 @@ export default function HomePage() {
           />
           <Search className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground" />
         </div>
-        <Button disabled={selectedList.length === 0} onClick={goCompare}>
-          比较({selectedList.length})
-        </Button>
       </section>
       {/* 列表布局：长列表而非宫格卡片 */}
       <section className="mt-4 rounded-lg border divide-y">
         {filtered.map((s) => (
-          <ServiceRow
-            key={s.id}
-            service={s}
-            selected={!!selected[s.id]}
-            onToggle={() => setSelected((prev) => ({ ...prev, [s.id]: !prev[s.id] }))}
-          />
+          <ServiceRow key={s.id} service={s} />
         ))}
       </section>
     </div>

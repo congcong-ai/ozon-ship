@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type ComparePayload = {
   ts: number;
@@ -9,8 +10,11 @@ type ComparePayload = {
 
 export default function ComparePage() {
   const [payload, setPayload] = useState<ComparePayload | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
+    // 直接重定向到首页，compare 功能已移除
+    router.replace("/");
     const raw = localStorage.getItem("compare_items");
     if (raw) {
       try {

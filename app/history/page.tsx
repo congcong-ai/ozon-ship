@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type HistoryItem = {
   ts: number;
@@ -9,8 +10,11 @@ type HistoryItem = {
 
 export default function HistoryPage() {
   const [items, setItems] = useState<HistoryItem[]>([]);
+  const router = useRouter();
 
   useEffect(() => {
+    // 直接重定向到首页，历史功能已移除
+    router.replace("/");
     const raw = localStorage.getItem("calc_history");
     if (raw) {
       try {

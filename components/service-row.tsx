@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import { ServiceWithComputed } from "@/types/shipping";
 
-export default function ServiceRow({ service, selected, onToggle }: { service: ServiceWithComputed; selected: boolean; onToggle: () => void }) {
+export default function ServiceRow({ service }: { service: ServiceWithComputed }) {
   const [open, setOpen] = useState(false);
 
   const pricingDesc = useMemo(() => formatPricing(service), [service]);
@@ -28,10 +28,6 @@ export default function ServiceRow({ service, selected, onToggle }: { service: S
       </div>
 
       <div className="flex items-center gap-3">
-        <label className="flex items-center gap-1 text-sm">
-          <input type="checkbox" checked={selected} onChange={onToggle} />
-          比较
-        </label>
         <Button variant="outline" size="sm" onClick={() => setOpen(true)}>详情</Button>
       </div>
 
