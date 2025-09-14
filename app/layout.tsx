@@ -1,6 +1,7 @@
 import "./globals.css";
 import { ReactNode } from "react";
 import MobileTabBar from "@/components/mobile-tab-bar";
+import TopNav from "@/components/top-nav";
 
 export const metadata = {
   title: "Ozon Ship Calculator",
@@ -9,8 +10,9 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="zh-CN">
-      <body className="min-h-screen antialiased">
+    <html lang="zh-CN" suppressHydrationWarning>
+      <body className="min-h-screen antialiased" suppressHydrationWarning>
+        <TopNav />
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-16 sm:pb-0">
           {children}
         </div>
