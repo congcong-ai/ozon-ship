@@ -1,0 +1,27 @@
+{
+  "carrier": "iml",
+  "currency": "CNY",
+  "source": "docs/carriers/iml/*.jpg",
+  "rates": [
+    { "carrier": "iml", "tier": "Standard", "delivery": "pickup", "group": "Extra Small",    "pricing": { "base_cny": 2.95, "per_gram_cny": 0.035 } },
+    { "carrier": "iml", "tier": "Standard", "delivery": "door",   "group": "Extra Small",    "pricing": { "base_cny": 2.95, "per_gram_cny": 0.035 } },
+
+    { "carrier": "iml", "tier": "Standard", "delivery": "pickup", "group": "Budget",          "pricing": { "base_cny": 22.95, "per_gram_cny": 0.025 } },
+    { "carrier": "iml", "tier": "Standard", "delivery": "door",   "group": "Budget",          "pricing": { "base_cny": 22.95, "per_gram_cny": 0.025 } },
+
+    { "carrier": "iml", "tier": "Standard", "delivery": "pickup", "group": "Small",           "pricing": { "base_cny": 15.95, "per_gram_cny": 0.035 } },
+    { "carrier": "iml", "tier": "Standard", "delivery": "door",   "group": "Small",           "pricing": { "base_cny": 15.95, "per_gram_cny": 0.035 } },
+
+    { "carrier": "iml", "tier": "Standard", "delivery": "pickup", "group": "Big",             "pricing": { "base_cny": 35.95, "per_gram_cny": 0.025 } },
+    { "carrier": "iml", "tier": "Standard", "delivery": "door",   "group": "Big",             "pricing": { "base_cny": 35.95, "per_gram_cny": 0.025 } },
+
+    { "carrier": "iml", "tier": "Economy",  "delivery": "pickup", "group": "Extra Small",    "pricing": { "base_cny": 2.95, "per_gram_cny": 0.025 } },
+    { "carrier": "iml", "tier": "Economy",  "delivery": "door",   "group": "Extra Small",    "pricing": { "base_cny": 2.95, "per_gram_cny": 0.025 } },
+
+    { "carrier": "iml", "tier": "Economy",  "delivery": "pickup", "group": "Budget",          "pricing": { "base_cny": 22.95, "per_gram_cny": 0.0171 } },
+    { "carrier": "iml", "tier": "Economy",  "delivery": "door",   "group": "Budget",          "pricing": { "base_cny": 22.95, "per_gram_cny": 0.0171 } },
+
+    { "carrier": "iml", "tier": "Economy",  "delivery": "pickup", "group": "Small",           "pricing": { "base_cny": 15.95, "per_gram_cny": 0.025 } },
+    { "carrier": "iml", "tier": "Economy",  "delivery": "door",   "group": "Small",           "pricing": { "base_cny": 15.95, "per_gram_cny": 0.025 } }
+  ]
+}

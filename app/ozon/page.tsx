@@ -333,13 +333,36 @@ export default function OzonPage() {
     return activeRates[0] || null;
   }, [activeRates, best]);
 
-  // 针对当前滑块售价推断出的组，选择与图表三元组匹配的费率（优先同 carrier/tier/delivery）
+  // 方案B：针对当前滑块售价与组，动态选取“该组内利润率最高”的费率（三元组）
   const rateAtSliderPrice = useMemo(() => {
-    const primary = rates.find(r => r.group === groupAtSliderPrice && r.carrier === chartTriple.carrier && r.tier === chartTriple.tier && r.delivery === chartTriple.delivery);
-    if (primary) return primary;
-    const fallback = rates.find(r => r.group === groupAtSliderPrice);
-    return fallback || null;
-  }, [rates, groupAtSliderPrice, chartTriple.carrier, chartTriple.tier, chartTriple.delivery]);
+    if (sliderPrice === null) return null;
+    const candidateRates = rates.filter(r => r.group === groupAtSliderPrice);
+    if (candidateRates.length === 0) return null;
+    const params: OzonPricingParams = {
+      weight_g: weightG,
+      dims_cm: dims,
+      cost_cny: costCny,
+      commission,
+      acquiring,
+      fx,
+      last_mile: { rate: lastmileRate, min_rub: lastmileMin, max_rub: lastmileMax },
+      rub_per_cny: rubPerCny,
+      fx_include_intl: fxIncludeIntl,
+    } as OzonPricingParams;
+    let bestRate = candidateRates[0];
+    let bestMargin = -Infinity;
+    for (const r of candidateRates) {
+      const b = computeProfitForPrice(sliderPrice, groupAtSliderPrice, r.pricing, params);
+      if (b.margin > bestMargin) { bestMargin = b.margin; bestRate = r; }
+    }
+    return bestRate || null;
+  }, [sliderPrice, rates, groupAtSliderPrice, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl]);
+
+  // 顶部显示条优先使用“动态最优费率”的三元组；若无则回退到稳定的 chartTriple
+  const chartTripleForControls = useMemo(() => {
+    if (rateAtSliderPrice) return { carrier: rateAtSliderPrice.carrier, tier: rateAtSliderPrice.tier, delivery: rateAtSliderPrice.delivery };
+    return chartTriple;
+  }, [rateAtSliderPrice?.carrier, rateAtSliderPrice?.tier, rateAtSliderPrice?.delivery, chartTriple.carrier, chartTriple.tier, chartTriple.delivery]);
 
 
   // 记录上一次的组与最低利润率，用于决定是否需要自动吸附到“10%端点”
@@ -574,7 +597,7 @@ export default function OzonPage() {
           priceInput={priceInput}
           setPriceInput={setPriceInput}
           sliderBreakdown={sliderBreakdown}
-          chartTriple={chartTriple}
+          chartTriple={chartTripleForControls}
           rubPerCny={rubPerCny}
           activeGroup={groupAtSliderPrice}
           minMargin={minMargin}

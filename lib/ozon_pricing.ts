@@ -292,14 +292,42 @@ function neighborsBelow(values: number[], radius: number = 20): number[] {
 // ------------------------------
 // 5) Rate 数据加载（按“每家一个 JSON”）
 // ------------------------------
-// 目前仅内置 Ural，后续可继续静态导入更多文件，例如：
-// import sf from "@/data/ozon_sfexpress.json";
+// 汇总载入 data/ 目录下的各承运商静态 JSON（除 ChinaPost 外）。
 
 import ural from "@/data/ozon_ural.json";
+import abt from "@/data/ozon_abt.json";
+import atc from "@/data/ozon_atc.json";
+import cel from "@/data/ozon_cel.json";
+import guoo from "@/data/ozon_guoo.json";
+import iml from "@/data/ozon_iml.json";
+import leader from "@/data/ozon_leader.json";
+import oyx from "@/data/ozon_oyx.json";
+import rets from "@/data/ozon_rets.json";
+import tanais from "@/data/ozon_tanais.json";
+import uni from "@/data/ozon_uni.json";
+import xy from "@/data/ozon_xy.json";
+import zto from "@/data/ozon_zto.json";
 
 export function loadAllCarrierRates(): OzonRateTable[] {
   const arr: OzonRateTable[] = [];
-  if (ural?.rates) arr.push(...(ural.rates as OzonRateTable[]));
+  const sources = [
+    ural,
+    abt,
+    atc,
+    cel,
+    guoo,
+    iml,
+    leader,
+    oyx,
+    rets,
+    tanais,
+    uni,
+    xy,
+    zto,
+  ];
+  for (const src of sources) {
+    if (src && (src as any).rates) arr.push(...(((src as any).rates) as OzonRateTable[]));
+  }
   return arr;
 }
 

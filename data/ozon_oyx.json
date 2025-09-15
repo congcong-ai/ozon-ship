@@ -1,0 +1,42 @@
+{
+  "carrier": "oyx",
+  "currency": "CNY",
+  "source": "docs/carriers/oyx/*.jpg",
+  "rates": [
+    { "carrier": "oyx", "tier": "Express",  "delivery": "pickup", "group": "Extra Small",    "pricing": { "base_cny": 3,    "per_gram_cny": 0.045 } },
+    { "carrier": "oyx", "tier": "Express",  "delivery": "door",   "group": "Extra Small",    "pricing": { "base_cny": 3,    "per_gram_cny": 0.045 } },
+
+    { "carrier": "oyx", "tier": "Express",  "delivery": "pickup", "group": "Small",           "pricing": { "base_cny": 16,   "per_gram_cny": 0.045 } },
+    { "carrier": "oyx", "tier": "Express",  "delivery": "door",   "group": "Small",           "pricing": { "base_cny": 16,   "per_gram_cny": 0.045 } },
+
+    { "carrier": "oyx", "tier": "Express",  "delivery": "pickup", "group": "Premium Small",    "pricing": { "base_cny": 22,   "per_gram_cny": 0.045 } },
+    { "carrier": "oyx", "tier": "Express",  "delivery": "door",   "group": "Premium Small",    "pricing": { "base_cny": 22,   "per_gram_cny": 0.045 } },
+
+    { "carrier": "oyx", "tier": "Standard", "delivery": "pickup", "group": "Extra Small",    "pricing": { "base_cny": 2.9,  "per_gram_cny": 0.035 } },
+    { "carrier": "oyx", "tier": "Standard", "delivery": "door",   "group": "Extra Small",    "pricing": { "base_cny": 2.9,  "per_gram_cny": 0.035 } },
+
+    { "carrier": "oyx", "tier": "Standard", "delivery": "pickup", "group": "Budget",          "pricing": { "base_cny": 22.6, "per_gram_cny": 0.025 } },
+    { "carrier": "oyx", "tier": "Standard", "delivery": "door",   "group": "Budget",          "pricing": { "base_cny": 22.6, "per_gram_cny": 0.025 } },
+
+    { "carrier": "oyx", "tier": "Standard", "delivery": "pickup", "group": "Small",           "pricing": { "base_cny": 15.6, "per_gram_cny": 0.035 } },
+    { "carrier": "oyx", "tier": "Standard", "delivery": "door",   "group": "Small",           "pricing": { "base_cny": 15.6, "per_gram_cny": 0.035 } },
+
+    { "carrier": "oyx", "tier": "Standard", "delivery": "pickup", "group": "Big",             "pricing": { "base_cny": 35.6, "per_gram_cny": 0.025 } },
+    { "carrier": "oyx", "tier": "Standard", "delivery": "door",   "group": "Big",             "pricing": { "base_cny": 35.6, "per_gram_cny": 0.025 } },
+
+    { "carrier": "oyx", "tier": "Standard", "delivery": "pickup", "group": "Premium Small",    "pricing": { "base_cny": 21.6, "per_gram_cny": 0.035 } },
+    { "carrier": "oyx", "tier": "Standard", "delivery": "door",   "group": "Premium Small",    "pricing": { "base_cny": 21.6, "per_gram_cny": 0.035 } },
+
+    { "carrier": "oyx", "tier": "Standard", "delivery": "pickup", "group": "Premium Big",      "pricing": { "base_cny": 62,   "per_gram_cny": 0.028 } },
+    { "carrier": "oyx", "tier": "Standard", "delivery": "door",   "group": "Premium Big",      "pricing": { "base_cny": 62,   "per_gram_cny": 0.028 } },
+
+    { "carrier": "oyx", "tier": "Economy",  "delivery": "pickup", "group": "Extra Small",    "pricing": { "base_cny": 2.9,  "per_gram_cny": 0.025 } },
+    { "carrier": "oyx", "tier": "Economy",  "delivery": "door",   "group": "Extra Small",    "pricing": { "base_cny": 2.9,  "per_gram_cny": 0.025 } },
+
+    { "carrier": "oyx", "tier": "Economy",  "delivery": "pickup", "group": "Small",           "pricing": { "base_cny": 15.6, "per_gram_cny": 0.025 } },
+    { "carrier": "oyx", "tier": "Economy",  "delivery": "door",   "group": "Small",           "pricing": { "base_cny": 15.6, "per_gram_cny": 0.025 } },
+
+    { "carrier": "oyx", "tier": "Economy",  "delivery": "pickup", "group": "Premium Small",    "pricing": { "base_cny": 21.6, "per_gram_cny": 0.025 } },
+    { "carrier": "oyx", "tier": "Economy",  "delivery": "door",   "group": "Premium Small",    "pricing": { "base_cny": 21.6, "per_gram_cny": 0.025 } }
+  ]
+}

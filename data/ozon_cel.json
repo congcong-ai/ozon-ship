@@ -1,0 +1,54 @@
+{
+  "carrier": "cel",
+  "currency": "CNY",
+  "source": "docs/carriers/cel/*.jpg",
+  "rates": [
+    { "carrier": "cel", "tier": "Express",  "delivery": "pickup", "group": "Extra Small",    "pricing": { "base_cny": 3,    "per_gram_cny": 0.045 } },
+    { "carrier": "cel", "tier": "Express",  "delivery": "door",   "group": "Extra Small",    "pricing": { "base_cny": 3,    "per_gram_cny": 0.045 } },
+
+    { "carrier": "cel", "tier": "Express",  "delivery": "pickup", "group": "Budget",          "pricing": { "base_cny": 23,   "per_gram_cny": 0.033 } },
+    { "carrier": "cel", "tier": "Express",  "delivery": "door",   "group": "Budget",          "pricing": { "base_cny": 23,   "per_gram_cny": 0.033 } },
+
+    { "carrier": "cel", "tier": "Express",  "delivery": "pickup", "group": "Small",           "pricing": { "base_cny": 16,   "per_gram_cny": 0.045 } },
+    { "carrier": "cel", "tier": "Express",  "delivery": "door",   "group": "Small",           "pricing": { "base_cny": 16,   "per_gram_cny": 0.045 } },
+
+    { "carrier": "cel", "tier": "Express",  "delivery": "pickup", "group": "Premium Small",    "pricing": { "base_cny": 22,   "per_gram_cny": 0.045 } },
+    { "carrier": "cel", "tier": "Express",  "delivery": "door",   "group": "Premium Small",    "pricing": { "base_cny": 22,   "per_gram_cny": 0.045 } },
+
+    { "carrier": "cel", "tier": "Standard", "delivery": "pickup", "group": "Extra Small",    "pricing": { "base_cny": 3,    "per_gram_cny": 0.035 } },
+    { "carrier": "cel", "tier": "Standard", "delivery": "door",   "group": "Extra Small",    "pricing": { "base_cny": 3,    "per_gram_cny": 0.035 } },
+
+    { "carrier": "cel", "tier": "Standard", "delivery": "pickup", "group": "Budget",          "pricing": { "base_cny": 23,   "per_gram_cny": 0.025 } },
+    { "carrier": "cel", "tier": "Standard", "delivery": "door",   "group": "Budget",          "pricing": { "base_cny": 23,   "per_gram_cny": 0.025 } },
+
+    { "carrier": "cel", "tier": "Standard", "delivery": "pickup", "group": "Small",           "pricing": { "base_cny": 16,   "per_gram_cny": 0.035 } },
+    { "carrier": "cel", "tier": "Standard", "delivery": "door",   "group": "Small",           "pricing": { "base_cny": 16,   "per_gram_cny": 0.035 } },
+
+    { "carrier": "cel", "tier": "Standard", "delivery": "pickup", "group": "Big",             "pricing": { "base_cny": 36,   "per_gram_cny": 0.025 } },
+    { "carrier": "cel", "tier": "Standard", "delivery": "door",   "group": "Big",             "pricing": { "base_cny": 36,   "per_gram_cny": 0.025 } },
+
+    { "carrier": "cel", "tier": "Standard", "delivery": "pickup", "group": "Premium Small",    "pricing": { "base_cny": 22,   "per_gram_cny": 0.035 } },
+    { "carrier": "cel", "tier": "Standard", "delivery": "door",   "group": "Premium Small",    "pricing": { "base_cny": 22,   "per_gram_cny": 0.035 } },
+
+    { "carrier": "cel", "tier": "Standard", "delivery": "pickup", "group": "Premium Big",      "pricing": { "base_cny": 62,   "per_gram_cny": 0.028 } },
+    { "carrier": "cel", "tier": "Standard", "delivery": "door",   "group": "Premium Big",      "pricing": { "base_cny": 62,   "per_gram_cny": 0.028 } },
+
+    { "carrier": "cel", "tier": "Economy",  "delivery": "pickup", "group": "Extra Small",    "pricing": { "base_cny": 3,    "per_gram_cny": 0.025 } },
+    { "carrier": "cel", "tier": "Economy",  "delivery": "door",   "group": "Extra Small",    "pricing": { "base_cny": 3,    "per_gram_cny": 0.025 } },
+
+    { "carrier": "cel", "tier": "Economy",  "delivery": "pickup", "group": "Budget",          "pricing": { "base_cny": 23,   "per_gram_cny": 0.0171 } },
+    { "carrier": "cel", "tier": "Economy",  "delivery": "door",   "group": "Budget",          "pricing": { "base_cny": 23,   "per_gram_cny": 0.0171 } },
+
+    { "carrier": "cel", "tier": "Economy",  "delivery": "pickup", "group": "Small",           "pricing": { "base_cny": 16,   "per_gram_cny": 0.025 } },
+    { "carrier": "cel", "tier": "Economy",  "delivery": "door",   "group": "Small",           "pricing": { "base_cny": 16,   "per_gram_cny": 0.025 } },
+
+    { "carrier": "cel", "tier": "Economy",  "delivery": "pickup", "group": "Big",             "pricing": { "base_cny": 36,   "per_gram_cny": 0.0171 } },
+    { "carrier": "cel", "tier": "Economy",  "delivery": "door",   "group": "Big",             "pricing": { "base_cny": 36,   "per_gram_cny": 0.0171 } },
+
+    { "carrier": "cel", "tier": "Economy",  "delivery": "pickup", "group": "Premium Small",    "pricing": { "base_cny": 22,   "per_gram_cny": 0.025 } },
+    { "carrier": "cel", "tier": "Economy",  "delivery": "door",   "group": "Premium Small",    "pricing": { "base_cny": 22,   "per_gram_cny": 0.025 } },
+
+    { "carrier": "cel", "tier": "Economy",  "delivery": "pickup", "group": "Premium Big",      "pricing": { "base_cny": 62,   "per_gram_cny": 0.0231 } },
+    { "carrier": "cel", "tier": "Economy",  "delivery": "door",   "group": "Premium Big",      "pricing": { "base_cny": 62,   "per_gram_cny": 0.0231 } }
+  ]
+}
