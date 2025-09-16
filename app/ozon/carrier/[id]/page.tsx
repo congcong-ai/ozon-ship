@@ -2,6 +2,10 @@ import { carrierName } from "@/lib/carrier_names";
 import { getCarrierRates, getCarrierJson, getCarrierDetailsUrl } from "@/lib/ozon_data_meta";
 import Link from "next/link";
 
+// 静态导出（NEXT_EXPORT）下，动态段必须提供 generateStaticParams
+export const dynamicParams = false;
+export async function generateStaticParams() { return []; }
+
 export default async function CarrierDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id: rawId } = await props.params;
   const id = String(rawId || "").toLowerCase();
