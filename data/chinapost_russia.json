@@ -2,6 +2,9 @@
   "origin": "China",
   "destination": "Russia",
   "default_currency": "CNY",
+  "data_source": "https://docs.ozon.ru/global/zh-hans/fulfillment/rfbs/logistic-settings/partner-delivery-ozon/?country=CN",
+  "data_date": "2025-09-15",
+  "details_url": "https://docs.ozon.ru/global/zh-hans/fulfillment/rfbs/logistic-settings/china-post/?country=CN",
   "services": [
     {
       "id": "chinapost_pudo_standard_air",

@@ -1,7 +1,10 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
+import { carrierName } from "@/lib/carrier_names";
 import type { ResultItem } from "@/types/ozon";
+import { loadAllCarrierRates } from "@/lib/ozon_pricing";
+import { useMemo } from "react";
 
 export default function ResultSummary({
   currentItem,
@@ -14,6 +17,7 @@ export default function ResultSummary({
   maxMargin: number;
   rubPerCny: number;
 }) {
+  const allRates = useMemo(() => loadAllCarrierRates(), []);
   const show = currentItem || best;
   if (!show) {
     return (
@@ -25,6 +29,16 @@ export default function ResultSummary({
   function deliveryZh(d: ResultItem["delivery"]) {
     if (d === "door") return "上门配送";
     return "取货点";
+  }
+  function metaOf(it: ResultItem | null) {
+    if (!it) return undefined;
+    return allRates.find(r => r.carrier === it.carrier && r.tier === it.tier && r.delivery === it.delivery && r.group === it.group);
+  }
+  const m = metaOf(show);
+  function batteryBadge(v?: boolean) {
+    if (v === true) return <span className="inline-flex items-center rounded border border-green-200 bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700">电池 允许</span>;
+    if (v === false) return <span className="inline-flex items-center rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-700">电池 不允许</span>;
+    return <span className="inline-flex items-center rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-xs font-medium text-gray-600">电池 未知</span>;
   }
 
   return (
@@ -39,7 +53,11 @@ export default function ResultSummary({
           利润率：{(show.breakdown.margin*100).toFixed(2)}% · 利润：₽ {(show.breakdown.profit_cny * rubPerCny).toFixed(2)} / ¥ {show.breakdown.profit_cny.toFixed(2)}
         </div>
         <div>
-          货件分组：{show.group} · 国际物流费（{String(show.carrier).replace(/^./, s => s.toUpperCase())} / {show.tier} / {deliveryZh(show.delivery)}）：₽ {show.breakdown.intl_logistics_rub.toFixed(2)}
+          货件分组：{show.group} · 国际物流费（{carrierName(String(show.carrier))} / {show.tier} / {deliveryZh(show.delivery)}）：₽ {show.breakdown.intl_logistics_rub.toFixed(2)}
+        </div>
+        <div className="text-xs text-muted-foreground flex items-center gap-2">
+          <span>时效：{m?.eta_days ?? "-"}</span>
+          {batteryBadge(m?.battery_allowed)}
         </div>
         {show.safe_range && (
           <div>安全区间：₽ {show.safe_range.from} ~ ₽ {show.safe_range.to}</div>

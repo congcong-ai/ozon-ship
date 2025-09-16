@@ -11,6 +11,8 @@ export default function ProfitCostCard({
   setMaxMargin,
   costCny,
   setCostCny,
+  sliderRange,
+  setSliderPrice,
 }: {
   minMargin: number;
   setMinMargin: (v: number) => void;
@@ -18,6 +20,8 @@ export default function ProfitCostCard({
   setMaxMargin: (v: number) => void;
   costCny: number;
   setCostCny: (v: number) => void;
+  sliderRange: { min: number; max: number } | null;
+  setSliderPrice: (p: number) => void;
 }) {
   const [minInput, setMinInput] = useState<string | null>(null);
   const [maxInput, setMaxInput] = useState<string | null>(null);
@@ -95,6 +99,7 @@ export default function ProfitCostCard({
             />
             <div className="text-xs text-muted-foreground">CNY</div>
           </div>
+          {/** 已移除“定位到下限/上限”按钮 */}
         </div>
       </CardContent>
     </Card>

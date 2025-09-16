@@ -4,6 +4,8 @@ import FxToolbar from "@/components/ozon/FxToolbar";
 import PriceControlsBar from "@/components/ozon/PriceControlsBar";
 import PriceChart, { type PriceChartSets } from "@/components/ozon/price-chart";
 import ChartLegend from "@/components/ozon/ChartLegend";
+import { Button } from "@/components/ui/button";
+import { Settings } from "lucide-react";
 import type { DeliveryMode, OzonGroup } from "@/types/ozon";
 
 export default function PriceChartCard({
@@ -21,23 +23,28 @@ export default function PriceChartCard({
   minMargin,
   maxMargin,
   fxToolbar,
+  onOpenSettings,
 }: {
   title?: string;
   chart: PriceChartSets;
   sliderRange: { min: number; max: number };
   sliderPrice: number | null;
-  onChangeSliderPrice: (v: number) => void;
+  onChangeSliderPrice: (p: number) => void;
   priceInput: string | null;
   setPriceInput: (s: string | null) => void;
-  sliderBreakdown: { margin: number; profit_cny: number; intl_logistics_rub: number } | null;
+  sliderBreakdown: {
+    margin: number;
+    profit_cny: number;
+    intl_logistics_rub: number;
+  } | null;
   chartTriple: { carrier: string; tier: string; delivery: DeliveryMode };
   rubPerCny: number;
   activeGroup: OzonGroup;
   minMargin?: number;
   maxMargin?: number;
   fxToolbar: {
-    rubFxMode: "auto" | "manual";
-    setRubFxMode: (m: "auto" | "manual") => void;
+    rubFxMode: 'auto' | 'manual';
+    setRubFxMode: (m: 'auto' | 'manual') => void;
     rubPerCny: number;
     setRubPerCny: (v: number) => void;
     rubPerCnyInput: string | null;
@@ -47,6 +54,7 @@ export default function PriceChartCard({
     fxSource: string | null;
     fxUpdatedAt: string | null;
   };
+  onOpenSettings: () => void;
 }) {
   const yMin = typeof minMargin === 'number' ? minMargin : 0.1;
   const yMax = typeof maxMargin === 'number' && maxMargin > 0 ? maxMargin : yMin + 1;
@@ -55,7 +63,13 @@ export default function PriceChartCard({
     <section className="rounded-lg border p-4 space-y-3">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-medium">{title}</h2>
-        <FxToolbar {...fxToolbar} />
+        <div className="flex items-center gap-2">
+          <FxToolbar {...fxToolbar} />
+          <Button size="sm" variant="default" onClick={onOpenSettings}>
+            <Settings className="mr-1 h-4 w-4" />
+            更多设置
+          </Button>
+        </div>
       </div>
       <div className="grid grid-cols-1 gap-3">
         <PriceControlsBar

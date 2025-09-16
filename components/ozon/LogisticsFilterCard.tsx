@@ -3,6 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { carrierName } from "@/lib/carrier_names";
+import { getCarrierDetailsUrl } from "@/lib/ozon_data_meta";
 import type { DeliveryMode, OzonGroup } from "@/types/ozon";
 
 export default function LogisticsFilterCard({
@@ -41,7 +43,22 @@ export default function LogisticsFilterCard({
               <SelectContent>
                 <SelectItem value={ALL}>全部</SelectItem>
                 {carriers.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                  <SelectItem key={c} value={c} label={carrierName(c)}>
+                    <a
+                      className="ml-auto inline-flex items-center rounded border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs text-blue-700 hover:bg-blue-100"
+                      href={getCarrierDetailsUrl(c)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onPointerDownCapture={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                      onPointerUpCapture={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                      onMouseDownCapture={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                      onMouseUpCapture={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                      onKeyDownCapture={(e) => { e.stopPropagation(); if (e.key === "Enter" || e.key === " ") { e.preventDefault(); window.open(getCarrierDetailsUrl(c), "_blank", "noopener,noreferrer"); } }}
+                      onClickCapture={(e) => { e.stopPropagation(); e.preventDefault(); window.open(getCarrierDetailsUrl(c), "_blank", "noopener,noreferrer"); }}
+                    >
+                      联系
+                    </a>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -70,7 +87,7 @@ export default function LogisticsFilterCard({
             </Select>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground mt-2">可行组：{feasibleGroups.join("、") || "无"}</p>
+        <p className="text-xs text-muted-foreground mt-2">当前重量及价格适用以下Ozon货件分组：{feasibleGroups.join("、") || "无"}</p>
       </CardContent>
     </Card>
   );

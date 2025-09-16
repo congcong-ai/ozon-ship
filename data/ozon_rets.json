@@ -1,33 +1,36 @@
 {
   "carrier": "rets",
   "currency": "CNY",
+  "data_source": "https://docs.ozon.ru/global/zh-hans/fulfillment/rfbs/logistic-settings/partner-delivery-ozon/?country=CN",
+  "data_date": "2025-09-15",
+  "details_url": "https://docs.ozon.ru/global/zh-hans/fulfillment/rfbs/logistic-settings/partner-delivery-ozon/rets/?country=CN",
   "source": "docs/carriers/rets/*.jpg",
   "rates": [
-    { "carrier": "rets", "tier": "Standard", "delivery": "pickup", "group": "Extra Small",    "pricing": { "base_cny": 2.8,  "per_gram_cny": 0.0335 } },
-    { "carrier": "rets", "tier": "Standard", "delivery": "door",   "group": "Extra Small",    "pricing": { "base_cny": 2.8,  "per_gram_cny": 0.0335 } },
+    { "carrier": "rets", "tier": "Standard", "delivery": "pickup", "group": "Extra Small",    "pricing": { "base_cny": 2.8,  "per_gram_cny": 0.0335 }, "eta_days": "10-15", "battery_allowed": true },
+    { "carrier": "rets", "tier": "Standard", "delivery": "door",   "group": "Extra Small",    "pricing": { "base_cny": 2.8,  "per_gram_cny": 0.0335 }, "eta_days": "10-15", "battery_allowed": true },
 
-    { "carrier": "rets", "tier": "Standard", "delivery": "pickup", "group": "Budget",          "pricing": { "base_cny": 22.9, "per_gram_cny": 0.0246 } },
-    { "carrier": "rets", "tier": "Standard", "delivery": "door",   "group": "Budget",          "pricing": { "base_cny": 22.9, "per_gram_cny": 0.0246 } },
+    { "carrier": "rets", "tier": "Standard", "delivery": "pickup", "group": "Budget",          "pricing": { "base_cny": 22.9, "per_gram_cny": 0.0246 }, "eta_days": "10-15", "battery_allowed": true },
+    { "carrier": "rets", "tier": "Standard", "delivery": "door",   "group": "Budget",          "pricing": { "base_cny": 22.9, "per_gram_cny": 0.0246 }, "eta_days": "10-15", "battery_allowed": true },
 
-    { "carrier": "rets", "tier": "Standard", "delivery": "pickup", "group": "Small",           "pricing": { "base_cny": 15,   "per_gram_cny": 0.0331 } },
-    { "carrier": "rets", "tier": "Standard", "delivery": "door",   "group": "Small",           "pricing": { "base_cny": 15,   "per_gram_cny": 0.0331 } },
+    { "carrier": "rets", "tier": "Standard", "delivery": "pickup", "group": "Small",           "pricing": { "base_cny": 15,   "per_gram_cny": 0.0331 }, "eta_days": "10-15", "battery_allowed": true },
+    { "carrier": "rets", "tier": "Standard", "delivery": "door",   "group": "Small",           "pricing": { "base_cny": 15,   "per_gram_cny": 0.0331 }, "eta_days": "10-15", "battery_allowed": true },
 
-    { "carrier": "rets", "tier": "Standard", "delivery": "pickup", "group": "Premium Small",    "pricing": { "base_cny": 21.9, "per_gram_cny": 0.0341 } },
-    { "carrier": "rets", "tier": "Standard", "delivery": "door",   "group": "Premium Small",    "pricing": { "base_cny": 21.9, "per_gram_cny": 0.0341 } },
+    { "carrier": "rets", "tier": "Standard", "delivery": "pickup", "group": "Premium Small",    "pricing": { "base_cny": 21.9, "per_gram_cny": 0.0341 }, "eta_days": "10-15", "battery_allowed": true },
+    { "carrier": "rets", "tier": "Standard", "delivery": "door",   "group": "Premium Small",    "pricing": { "base_cny": 21.9, "per_gram_cny": 0.0341 }, "eta_days": "10-15", "battery_allowed": true },
 
-    { "carrier": "rets", "tier": "Economy",  "delivery": "pickup", "group": "Extra Small",    "pricing": { "base_cny": 2.85, "per_gram_cny": 0.0235 } },
-    { "carrier": "rets", "tier": "Economy",  "delivery": "door",   "group": "Extra Small",    "pricing": { "base_cny": 2.85, "per_gram_cny": 0.0235 } },
+    { "carrier": "rets", "tier": "Economy",  "delivery": "pickup", "group": "Extra Small",    "pricing": { "base_cny": 2.85, "per_gram_cny": 0.0235 }, "eta_days": "20-25", "battery_allowed": true },
+    { "carrier": "rets", "tier": "Economy",  "delivery": "door",   "group": "Extra Small",    "pricing": { "base_cny": 2.85, "per_gram_cny": 0.0235 }, "eta_days": "20-25", "battery_allowed": true },
 
-    { "carrier": "rets", "tier": "Economy",  "delivery": "pickup", "group": "Budget",          "pricing": { "base_cny": 22.5, "per_gram_cny": 0.0165 } },
-    { "carrier": "rets", "tier": "Economy",  "delivery": "door",   "group": "Budget",          "pricing": { "base_cny": 22.5, "per_gram_cny": 0.0165 } },
+    { "carrier": "rets", "tier": "Economy",  "delivery": "pickup", "group": "Budget",          "pricing": { "base_cny": 22.5, "per_gram_cny": 0.0165 }, "eta_days": "20-25", "battery_allowed": true },
+    { "carrier": "rets", "tier": "Economy",  "delivery": "door",   "group": "Budget",          "pricing": { "base_cny": 22.5, "per_gram_cny": 0.0165 }, "eta_days": "20-25", "battery_allowed": true },
 
-    { "carrier": "rets", "tier": "Economy",  "delivery": "pickup", "group": "Small",           "pricing": { "base_cny": 15.9, "per_gram_cny": 0.023 } },
-    { "carrier": "rets", "tier": "Economy",  "delivery": "door",   "group": "Small",           "pricing": { "base_cny": 15.9, "per_gram_cny": 0.023 } },
+    { "carrier": "rets", "tier": "Economy",  "delivery": "pickup", "group": "Small",           "pricing": { "base_cny": 15.9, "per_gram_cny": 0.023 }, "eta_days": "15-20", "battery_allowed": true },
+    { "carrier": "rets", "tier": "Economy",  "delivery": "door",   "group": "Small",           "pricing": { "base_cny": 15.9, "per_gram_cny": 0.023 }, "eta_days": "15-20", "battery_allowed": true },
 
-    { "carrier": "rets", "tier": "Economy",  "delivery": "pickup", "group": "Premium Small",    "pricing": { "base_cny": 21.9, "per_gram_cny": 0.024 } },
-    { "carrier": "rets", "tier": "Economy",  "delivery": "door",   "group": "Premium Small",    "pricing": { "base_cny": 21.9, "per_gram_cny": 0.024 } },
+    { "carrier": "rets", "tier": "Economy",  "delivery": "pickup", "group": "Premium Small",    "pricing": { "base_cny": 21.9, "per_gram_cny": 0.024 }, "eta_days": "15-20", "battery_allowed": true },
+    { "carrier": "rets", "tier": "Economy",  "delivery": "door",   "group": "Premium Small",    "pricing": { "base_cny": 21.9, "per_gram_cny": 0.024 }, "eta_days": "15-20", "battery_allowed": true },
 
-    { "carrier": "rets", "tier": "Economy",  "delivery": "pickup", "group": "Premium Big",      "pricing": { "base_cny": 62,   "per_gram_cny": 0.0227 } },
-    { "carrier": "rets", "tier": "Economy",  "delivery": "door",   "group": "Premium Big",      "pricing": { "base_cny": 62,   "per_gram_cny": 0.0227 } }
+    { "carrier": "rets", "tier": "Economy",  "delivery": "pickup", "group": "Premium Big",      "pricing": { "base_cny": 62,   "per_gram_cny": 0.0227 }, "eta_days": "20-25", "battery_allowed": true },
+    { "carrier": "rets", "tier": "Economy",  "delivery": "door",   "group": "Premium Big",      "pricing": { "base_cny": 62,   "per_gram_cny": 0.0227 }, "eta_days": "20-25", "battery_allowed": true }
   ]
 }

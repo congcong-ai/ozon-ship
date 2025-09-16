@@ -27,6 +27,8 @@ export type OzonRateTable = {
   delivery: DeliveryMode;
   group: OzonGroup;
   pricing: LinearWeightPricingCNY;
+  eta_days?: string;
+  battery_allowed?: boolean;
 };
 
 export type OzonPricingParams = {

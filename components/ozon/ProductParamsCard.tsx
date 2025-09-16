@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 
 export default function ProductParamsCard({
   weightUnit,
@@ -14,8 +13,6 @@ export default function ProductParamsCard({
   setWeightG,
   dims,
   setDims,
-  sliderRange,
-  setSliderPrice,
 }: {
   weightUnit: "g" | "kg";
   setWeightUnit: (u: "g" | "kg") => void;
@@ -23,8 +20,6 @@ export default function ProductParamsCard({
   setWeightG: (g: number) => void;
   dims: { l: number; w: number; h: number };
   setDims: (d: { l: number; w: number; h: number }) => void;
-  sliderRange: { min: number; max: number } | null;
-  setSliderPrice: (p: number) => void;
 }) {
   const [weightInput, setWeightInput] = useState<string | null>(null);
   const [lenInput, setLenInput] = useState<string | null>(null);
@@ -68,28 +63,7 @@ export default function ProductParamsCard({
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-center gap-2 ml-auto">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                if (!sliderRange) return;
-                setSliderPrice(sliderRange.min);
-              }}
-            >
-              定位到下限
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                if (!sliderRange) return;
-                setSliderPrice(sliderRange.max);
-              }}
-            >
-              定位到上限
-            </Button>
-          </div>
+          <div className="flex-1" />
         </div>
         <p className="mt-1 text-xs text-muted-foreground">默认按克计；切换单位仅影响显示，内部统一用克计算。</p>
 

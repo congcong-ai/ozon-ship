@@ -1,30 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import Slider from "@/components/ui/slider";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 // Dialog 已拆分至独立组件
-import { PackageSearch, Search } from "lucide-react";
-import { bestPricingWithAutoLoad, loadAllCarrierRates, OZON_GROUP_RULES, computeProfitForPrice, priceRangeForMargin } from "@/lib/ozon_pricing";
+import { PackageSearch, Info } from "lucide-react";
+import { bestPricingWithAutoLoad, loadAllCarrierRates, OZON_GROUP_RULES, computeProfitForPrice } from "@/lib/ozon_pricing";
 import type { DeliveryMode, OzonPricingParams, ResultItem, OzonGroup } from "@/types/ozon";
-import PriceChart from "@/components/ozon/price-chart";
 import { useOzonChart } from "@/hooks/useOzonChart";
 import ProductParamsCard from "@/components/ozon/ProductParamsCard";
 import ProfitCostCard from "@/components/ozon/ProfitCostCard";
 import LogisticsFilterCard from "@/components/ozon/LogisticsFilterCard";
-import FxToolbar from "@/components/ozon/FxToolbar";
-import SearchBar from "@/components/ozon/SearchBar";
 import ResultSummary from "@/components/ozon/ResultSummary";
-import CandidatesCard from "@/components/ozon/CandidatesCard";
-import ChartLegend from "@/components/ozon/ChartLegend";
 import SettingsDialog from "@/components/ozon/SettingsDialog";
-import DetailsDialog from "@/components/ozon/DetailsDialog";
-import PriceControlsBar from "@/components/ozon/PriceControlsBar";
 import PriceChartCard from "@/components/ozon/PriceChartCard";
+import CarrierList from "@/components/ozon/CarrierList";
+import ListFilterBar from "@/components/ozon/ListFilterBar";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getDataSourceUrl, getAllDataDates } from "@/lib/ozon_data_meta";
+import { carrierName } from "@/lib/carrier_names";
+import DetailsDialog from "@/components/ozon/DetailsDialog";
 
 // 组别颜色映射（保持跨渲染稳定）
 const GROUP_COLORS: Record<OzonGroup, string> = {
@@ -41,18 +35,27 @@ export default function OzonPage() {
   const LS_KEY = "ozon_page_state_v1";
   const rates = useMemo(() => loadAllCarrierRates(), []);
   const carriers = useMemo(() => Array.from(new Set(rates.map((r) => r.carrier))), [rates]);
-  const [carrier, setCarrier] = useState<string>("");
-  const tiers = useMemo(() => {
-    const list = rates.filter((r) => !carrier || r.carrier === carrier).map((r) => r.tier);
+  // 顶部“物流选择（可选）”——用于利润率曲线，仅限制图表
+  const [chartCarrier, setChartCarrier] = useState<string>("");
+  const chartTiers = useMemo(() => {
+    const list = rates.filter((r) => !chartCarrier || r.carrier === chartCarrier).map((r) => r.tier);
     return Array.from(new Set(list));
-  }, [rates, carrier]);
-  const [tier, setTier] = useState<string>("");
-  const [delivery, setDelivery] = useState<DeliveryMode | "">("");
+  }, [rates, chartCarrier]);
+  const [chartTier, setChartTier] = useState<string>("");
+  const [chartDelivery, setChartDelivery] = useState<DeliveryMode | "">("");
+  // 底部“列表筛选条”——用于承运商清单，独立于上方图表选择
+  const [listCarrier, setListCarrier] = useState<string>("");
+  const listTiers = useMemo(() => {
+    const list = rates.filter((r) => !listCarrier || r.carrier === listCarrier).map((r) => r.tier);
+    return Array.from(new Set(list));
+  }, [rates, listCarrier]);
+  const [listTier, setListTier] = useState<string>("");
+  const [listDelivery, setListDelivery] = useState<DeliveryMode | "">("");
 
   // 商品参数
-  const [weightG, setWeightG] = useState<number>(100);
+  const [weightG, setWeightG] = useState<number>(66);
   const [dims, setDims] = useState<{ l: number; w: number; h: number }>({ l: 20, w: 10, h: 5 });
-  const [costCny, setCostCny] = useState<number>(5);
+  const [costCny, setCostCny] = useState<number>(66);
 
   // 费率参数
   const [commission, setCommission] = useState(0.12);
@@ -62,9 +65,13 @@ export default function OzonPage() {
   const [lastmileRate, setLastmileRate] = useState(0.02);
   const [lastmileMin, setLastmileMin] = useState(15);
   const [lastmileMax, setLastmileMax] = useState(200);
-  const [maxMargin, setMaxMargin] = useState<number>(1); // 100%
+  const [maxMargin, setMaxMargin] = useState<number>(1.5); // 150%
   const [minMargin, setMinMargin] = useState<number>(0.1); // 10%
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
+  const [metaOpen, setMetaOpen] = useState<boolean>(false);
+  // 方案详情弹框
+  const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
+  const [detailsItem, setDetailsItem] = useState<ResultItem | null>(null);
 
   // 汇率（RUB/CNY）
   const [rubPerCny, setRubPerCny] = useState<number>(11.830961);
@@ -77,14 +84,9 @@ export default function OzonPage() {
 
   // 结果
   const [best, setBest] = useState<ResultItem | null>(null);
-  const [top, setTop] = useState<ResultItem[]>([]);
-  const [sortKey, setSortKey] = useState<"margin" | "price" | "receipt">("margin");
-  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+  const [top, setTop] = useState<ResultItem[]>([]); // 仅用于 best 回退，不再展示 Top 列表
   const ALL = "__ALL__";
   const [query, setQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"list" | "table">("list");
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [detailsItem, setDetailsItem] = useState<ResultItem | null>(null);
   const [weightUnit, setWeightUnit] = useState<"g" | "kg">("g");
   // 字符串态输入，允许清空
   const [weightInput, setWeightInput] = useState<string | null>(null);
@@ -95,6 +97,9 @@ export default function OzonPage() {
   const [maxMarginInput, setMaxMarginInput] = useState<string | null>(null);
   const [costInput, setCostInput] = useState<string | null>(null);
   const [priceInput, setPriceInput] = useState<string | null>(null);
+  // 列表筛选用的分组过滤（空 = 使用当前售价推断的组）
+  const [listGroupFilter, setListGroupFilter] = useState<OzonGroup | "">("");
+  const dataDates = useMemo(() => getAllDataDates(), []);
 
   // 售价滑块与利润率曲线
   const [sliderPrice, setSliderPrice] = useState<number | null>(null);
@@ -136,14 +141,15 @@ export default function OzonPage() {
       if (typeof s.maxMargin === 'number') setMaxMargin(s.maxMargin);
       if (typeof s.rubPerCny === 'number') setRubPerCny(s.rubPerCny);
       if (s.rubFxMode === 'auto' || s.rubFxMode === 'manual') setRubFxMode(s.rubFxMode);
-      if (typeof s.carrier === 'string') setCarrier(s.carrier);
-      if (typeof s.tier === 'string') setTier(s.tier);
-      if (typeof s.delivery === 'string') setDelivery(s.delivery);
+      if (typeof s.chartCarrier === 'string') setChartCarrier(s.chartCarrier);
+      if (typeof s.chartTier === 'string') setChartTier(s.chartTier);
+      if (typeof s.chartDelivery === 'string') setChartDelivery(s.chartDelivery);
+      if (typeof s.listCarrier === 'string') setListCarrier(s.listCarrier);
+      if (typeof s.listTier === 'string') setListTier(s.listTier);
+      if (typeof s.listDelivery === 'string') setListDelivery(s.listDelivery);
       if (typeof s.weightUnit === 'string' && (s.weightUnit === 'g' || s.weightUnit === 'kg')) setWeightUnit(s.weightUnit);
       if (typeof s.sliderPrice === 'number') setSliderPrice(s.sliderPrice);
-      if (typeof s.sortKey === 'string' && (s.sortKey === 'margin' || s.sortKey === 'price' || s.sortKey === 'receipt')) setSortKey(s.sortKey);
-      if (typeof s.sortOrder === 'string' && (s.sortOrder === 'asc' || s.sortOrder === 'desc')) setSortOrder(s.sortOrder);
-      if (typeof s.viewMode === 'string' && (s.viewMode === 'list' || s.viewMode === 'table')) setViewMode(s.viewMode);
+      // 移除排序/视图模式的恢复（不再使用候选方案列表）
       if (typeof s.query === 'string') setQuery(s.query);
       if (typeof s.groupMode === 'string') {
         const allowed: OzonGroup[] = [
@@ -173,20 +179,21 @@ export default function OzonPage() {
         maxMargin,
         rubPerCny,
         rubFxMode,
-        carrier,
-        tier,
-        delivery,
+        chartCarrier,
+        chartTier,
+        chartDelivery,
+        listCarrier,
+        listTier,
+        listDelivery,
         weightUnit,
         sliderPrice,
-        sortKey,
-        sortOrder,
-        viewMode,
+        // 已移除排序/视图模式
         query,
         groupMode,
       };
       localStorage.setItem(LS_KEY, JSON.stringify(s));
     } catch {}
-  }, [weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, fxIncludeIntl, lastmileRate, lastmileMin, lastmileMax, minMargin, maxMargin, rubPerCny, rubFxMode, carrier, tier, delivery, weightUnit, sliderPrice, sortKey, sortOrder, viewMode, query, groupMode]);
+  }, [weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, fxIncludeIntl, lastmileRate, lastmileMin, lastmileMax, minMargin, maxMargin, rubPerCny, rubFxMode, chartCarrier, chartTier, chartDelivery, listCarrier, listTier, listDelivery, weightUnit, sliderPrice, query, groupMode]);
 
   // 汇率拉取：先尝试 exchangerate.host，失败回退 open.er-api.com
   async function refreshFx() {
@@ -266,11 +273,11 @@ export default function OzonPage() {
       fx_include_intl: fxIncludeIntl,
       min_margin: (typeof minMargin === "number") ? minMargin : undefined,
       max_margin: (typeof maxMargin === "number" && maxMargin > 0) ? maxMargin : undefined,
-      carrier: carrier || undefined,
-      tier: tier || undefined,
-      delivery: (delivery || undefined) as any,
+      carrier: chartCarrier || undefined,
+      tier: chartTier || undefined,
+      delivery: (chartDelivery || undefined) as any,
     };
-    const out = bestPricingWithAutoLoad(params, 4);
+    const out = bestPricingWithAutoLoad(params, 1);
     setBest((prev)=>{
       const changed = !prev || !out.best || prev.price_rub !== out.best.price_rub || prev.carrier!==out.best.carrier || prev.tier!==out.best.tier || prev.delivery!==out.best.delivery;
       return changed ? out.best : prev;
@@ -280,14 +287,22 @@ export default function OzonPage() {
       const sameAll = sameLen && prev.every((v,i)=> v.price_rub===out.top[i].price_rub && v.carrier===out.top[i].carrier && v.tier===out.top[i].tier && v.delivery===out.top[i].delivery);
       return sameAll ? prev : out.top;
     });
-  }, [weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl, minMargin, maxMargin, carrier, tier, delivery]);
+  }, [weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl, minMargin, maxMargin, chartCarrier, chartTier, chartDelivery]);
 
   // 选取用于曲线与滑块的“激活费率 + 组”
+  // 仅按重量可行的组
   const feasibleGroups = useMemo<OzonGroup[]>(() => {
     return OZON_GROUP_RULES
       .filter((r) => weightG >= r.weightG.min && weightG <= r.weightG.max)
       .map((r) => r.group as OzonGroup);
   }, [weightG]);
+
+  // 按“重量 + 当前售价（若有）”可行的组（用于文案展示）
+  const feasibleGroupsByWeightPrice = useMemo<OzonGroup[]>(() => {
+    const byWeight = OZON_GROUP_RULES.filter(r => weightG >= r.weightG.min && weightG <= r.weightG.max);
+    if (sliderPrice == null) return byWeight.map(r => r.group as OzonGroup);
+    return byWeight.filter(r => sliderPrice >= r.priceRub.min && sliderPrice <= r.priceRub.max).map(r => r.group as OzonGroup);
+  }, [weightG, sliderPrice]);
 
   const activeGroup = useMemo<OzonGroup>(() => {
     if (groupMode && groupMode !== "auto" && feasibleGroups.includes(groupMode)) return groupMode as OzonGroup;
@@ -310,20 +325,20 @@ export default function OzonPage() {
 
   // 为图表锁定 carrier/tier/delivery 三元组（优先使用用户选择，否则回退到 best），避免滑动或点击点导致端点变化
   const chartTriple = useMemo(() => {
-    const pickCarrier = carrier || best?.carrier || (rates[0]?.carrier ?? "");
+    const pickCarrier = chartCarrier || best?.carrier || (rates[0]?.carrier ?? "");
     const sample = rates.find(r => r.carrier === pickCarrier) || rates[0] || null;
-    const pickTier = tier || best?.tier || (sample?.tier ?? "");
-    const pickDelivery = (delivery || best?.delivery || (sample?.delivery ?? "pickup")) as DeliveryMode;
+    const pickTier = chartTier || best?.tier || (sample?.tier ?? "");
+    const pickDelivery = (chartDelivery || best?.delivery || (sample?.delivery ?? "pickup")) as DeliveryMode;
     return { carrier: pickCarrier, tier: pickTier, delivery: pickDelivery };
-  }, [carrier, tier, delivery, best?.carrier, best?.tier, best?.delivery, rates]);
+  }, [chartCarrier, chartTier, chartDelivery, best?.carrier, best?.tier, best?.delivery, rates]);
 
   const activeRates = useMemo(() => {
     return rates
       .filter((r) => r.group === activeGroup)
-      .filter((r) => !carrier || r.carrier === carrier)
-      .filter((r) => !tier || r.tier === tier)
-      .filter((r) => !delivery || r.delivery === delivery);
-  }, [rates, activeGroup, carrier, tier, delivery]);
+      .filter((r) => !chartCarrier || r.carrier === chartCarrier)
+      .filter((r) => !chartTier || r.tier === chartTier)
+      .filter((r) => !chartDelivery || r.delivery === chartDelivery);
+  }, [rates, activeGroup, chartCarrier, chartTier, chartDelivery]);
 
   const activeRate = useMemo(() => {
     if (best) {
@@ -336,8 +351,9 @@ export default function OzonPage() {
   // 方案B：针对当前滑块售价与组，动态选取“该组内利润率最高”的费率（三元组）
   const rateAtSliderPrice = useMemo(() => {
     if (sliderPrice === null) return null;
-    const candidateRates = rates.filter(r => r.group === groupAtSliderPrice);
-    if (candidateRates.length === 0) return null;
+    // 使用与图表一致的三元组，确保曲线与“当前售价详情”的渠道一致
+    const chosen = rates.find(r => r.group === groupAtSliderPrice && r.carrier === chartTriple.carrier && r.tier === chartTriple.tier && r.delivery === chartTriple.delivery);
+    if (!chosen) return null;
     const params: OzonPricingParams = {
       weight_g: weightG,
       dims_cm: dims,
@@ -349,14 +365,9 @@ export default function OzonPage() {
       rub_per_cny: rubPerCny,
       fx_include_intl: fxIncludeIntl,
     } as OzonPricingParams;
-    let bestRate = candidateRates[0];
-    let bestMargin = -Infinity;
-    for (const r of candidateRates) {
-      const b = computeProfitForPrice(sliderPrice, groupAtSliderPrice, r.pricing, params);
-      if (b.margin > bestMargin) { bestMargin = b.margin; bestRate = r; }
-    }
-    return bestRate || null;
-  }, [sliderPrice, rates, groupAtSliderPrice, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl]);
+    // 仅返回所选三元组（不跨其他承运商）
+    return chosen;
+  }, [sliderPrice, rates, groupAtSliderPrice, chartTriple.carrier, chartTriple.tier, chartTriple.delivery]);
 
   // 顶部显示条优先使用“动态最优费率”的三元组；若无则回退到稳定的 chartTriple
   const chartTripleForControls = useMemo(() => {
@@ -446,47 +457,6 @@ export default function OzonPage() {
     return computeProfitForPrice(sliderPrice, groupAtSliderPrice, rateAtSliderPrice.pricing, params);
   }, [sliderPrice, rateAtSliderPrice?.carrier, rateAtSliderPrice?.tier, rateAtSliderPrice?.delivery, groupAtSliderPrice, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl]);
 
-  const displayRows = useMemo(() => {
-    const rows = [...top];
-    rows.sort((a, b) => {
-      let av = 0, bv = 0;
-      if (sortKey === "margin") { av = a.breakdown.margin; bv = b.breakdown.margin; }
-      else if (sortKey === "price") { av = a.price_rub; bv = b.price_rub; }
-      else { av = a.breakdown.receipt_rub; bv = b.breakdown.receipt_rub; }
-      const diff = av - bv;
-      return sortOrder === "desc" ? -diff : diff;
-    });
-    return rows;
-  }, [top, sortKey, sortOrder]);
-
-  // 同价利润比较（对当前 sliderPrice），用于回答“同价谁利润更高”
-  const samePriceCompare = useMemo(() => {
-    if (sliderPrice === null || !activeRate) return [] as { group: OzonGroup; margin: number | null; allowed: boolean }[];
-    const params: OzonPricingParams = {
-      weight_g: weightG,
-      dims_cm: dims,
-      cost_cny: costCny,
-      commission,
-      acquiring,
-      fx,
-      last_mile: { rate: lastmileRate, min_rub: lastmileMin, max_rub: lastmileMax },
-      rub_per_cny: rubPerCny,
-      fx_include_intl: fxIncludeIntl,
-    } as OzonPricingParams;
-    const list: { group: OzonGroup; margin: number | null; allowed: boolean }[] = [];
-    for (const g of feasibleGroups) {
-      const rate = rates
-        .filter((r) => r.group === g)
-        .filter((r) => r.carrier === activeRate.carrier && r.tier === activeRate.tier && r.delivery === activeRate.delivery)[0];
-      if (!rate) { list.push({ group: g, margin: null, allowed: false }); continue; }
-      const rule = OZON_GROUP_RULES.find(r=> r.group === g)!;
-      const allowed = sliderPrice >= rule.priceRub.min && sliderPrice <= rule.priceRub.max;
-      const b = computeProfitForPrice(sliderPrice, g, rate.pricing, params);
-      list.push({ group: g, margin: b.margin, allowed });
-    }
-    return list;
-  }, [sliderPrice, activeRate?.carrier, activeRate?.tier, activeRate?.delivery, feasibleGroups.join(','), rates, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl]);
-
   // 当前滑块对应的“即时详情”（不需要点击应用）
   const currentItem = useMemo(() => {
     if (sliderPrice === null || !rateAtSliderPrice || !groupAtSliderPrice) return null;
@@ -515,23 +485,48 @@ export default function OzonPage() {
     return item;
   }, [sliderPrice, rateAtSliderPrice?.carrier, rateAtSliderPrice?.tier, rateAtSliderPrice?.delivery, groupAtSliderPrice, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl]);
 
-  const viewRows = useMemo(()=>{
+  // 当前售价下：该组内所有承运商的实时列表
+  const listAtPrice = useMemo(() => {
+    if (sliderPrice === null) return [] as ResultItem[];
+    const params: OzonPricingParams = {
+      weight_g: weightG,
+      dims_cm: dims,
+      cost_cny: costCny,
+      commission,
+      acquiring,
+      fx,
+      last_mile: { rate: lastmileRate, min_rub: lastmileMin, max_rub: lastmileMax },
+      rub_per_cny: rubPerCny,
+      fx_include_intl: fxIncludeIntl,
+    } as OzonPricingParams;
+    // 选中的分组（为空则使用当前售价推断的分组）
+    const gPick = listGroupFilter || groupAtSliderPrice;
+    const rule = OZON_GROUP_RULES.find(r => r.group === gPick);
+    const inGroupRange = !rule || (sliderPrice >= rule.priceRub.min && sliderPrice <= rule.priceRub.max && weightG >= rule.weightG.min && weightG <= rule.weightG.max);
+    const rs = rates
+      .filter(r => r.group === gPick)
+      .filter(r => !listCarrier || r.carrier === listCarrier)
+      .filter(r => !listTier || r.tier === listTier)
+      .filter(r => !listDelivery || r.delivery === listDelivery)
+      .map(r => {
+        const breakdown = computeProfitForPrice(sliderPrice, groupAtSliderPrice, r.pricing, params);
+        return {
+          price_rub: sliderPrice,
+          group: gPick,
+          carrier: r.carrier,
+          tier: r.tier,
+          delivery: r.delivery,
+          breakdown,
+          safe_range: null,
+          constraint_ok: true,
+        } as ResultItem;
+      });
+    rs.sort((a,b)=> b.breakdown.margin - a.breakdown.margin || a.price_rub - b.price_rub);
     const q = query.trim().toLowerCase();
-    if (!q) return displayRows;
-    return displayRows.filter(r =>
-      [r.carrier, r.tier, r.delivery, r.group, String(r.price_rub)].join(" ").toLowerCase().includes(q)
-    );
-  }, [displayRows, query]);
-
-  function toggleSort(key: "margin" | "price" | "receipt") {
-    if (sortKey === key) setSortOrder((o) => (o === "desc" ? "asc" : "desc"));
-    else { setSortKey(key); setSortOrder("desc"); }
-  }
-
-  function isBestRow(r: ResultItem) {
-    if (!best) return false;
-    return r.carrier === best.carrier && r.tier === best.tier && r.delivery === best.delivery && r.price_rub === best.price_rub;
-  }
+    let out = q ? rs.filter(r => [r.carrier,r.tier,r.delivery,r.group].join(" ").toLowerCase().includes(q)) : rs;
+    if (rule && !inGroupRange) out = [];
+    return out;
+  }, [sliderPrice, rates, groupAtSliderPrice, listGroupFilter, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl, listCarrier, listTier, listDelivery, query]);
 
   return (
     <div className="py-6 space-y-6">
@@ -540,9 +535,22 @@ export default function OzonPage() {
           <PackageSearch className="h-5 w-5 text-primary" />
           <span>Ozon 最优售价计算器</span>
         </div>
-        <Button variant="outline" onClick={()=>setSettingsOpen(true)}>更多设置</Button>
       </div>
-      <p className="text-sm text-muted-foreground">填写上方参数，自动计算推荐售价与候选方案。</p>
+      <div className="text-sm text-muted-foreground flex flex-col gap-1">
+        <p>填写上方参数，自动计算推荐售价与候选方案。</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <a
+            href="#"
+            onClick={(e) => { e.preventDefault(); setMetaOpen(true); }}
+            className="inline-flex items-center gap-1 text-blue-600 hover:underline"
+            aria-label="查看数据来源与更新时间"
+            title="查看数据来源与更新时间"
+          >
+            <Info className="h-4 w-4" />
+            <span>数据来源与更新时间</span>
+          </a>
+        </div>
+      </div>
 
       {/* 顶部参数区域（等宽三卡）：商品参数(重量+尺寸) / 利润与成本 / 物流选择 */}
       <section className="grid grid-cols-1 gap-3 md:grid-cols-3 items-stretch">
@@ -554,8 +562,6 @@ export default function OzonPage() {
             setWeightG={setWeightG}
             dims={dims}
             setDims={setDims}
-            sliderRange={sliderRange}
-            setSliderPrice={(p)=> setSliderPrice(p)}
           />
         </div>
         <div className="col-span-1">
@@ -566,32 +572,31 @@ export default function OzonPage() {
             setMaxMargin={setMaxMargin}
             costCny={costCny}
             setCostCny={setCostCny}
+            sliderRange={sliderRange}
+            setSliderPrice={(p)=> setSliderPrice(p)}
           />
         </div>
         <div className="col-span-1">
           <LogisticsFilterCard
             carriers={carriers}
-            tiers={tiers}
-            carrier={carrier}
-            setCarrier={(v)=> { setCarrier(v); setTier(""); }}
-            tier={tier}
-            setTier={setTier}
-            delivery={delivery}
-            setDelivery={setDelivery}
-            feasibleGroups={feasibleGroups}
+            tiers={chartTiers}
+            carrier={chartCarrier}
+            setCarrier={(v)=> { setChartCarrier(v); setChartTier(""); }}
+            tier={chartTier}
+            setTier={setChartTier}
+            delivery={chartDelivery}
+            setDelivery={setChartDelivery}
+            feasibleGroups={feasibleGroupsByWeightPrice}
           />
         </div>
       </section>
 
-      {/* 第二行：搜索与过滤（全宽） */}
-      <section className="grid grid-cols-1">
-        <SearchBar query={query} setQuery={setQuery} />
-      </section>
+      {/* 移除顶部的搜索框 */}
 
       {activeRate && sliderRange ? (
         <PriceChartCard
           chart={chartSets}
-          sliderRange={sliderRange}
+          sliderRange={sliderRange!}
           sliderPrice={sliderPrice}
           onChangeSliderPrice={setSliderPrice}
           priceInput={priceInput}
@@ -614,22 +619,32 @@ export default function OzonPage() {
             fxSource,
             fxUpdatedAt,
           }}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
       ) : null}
       {/* 结果区：整屏宽度 */}
       <section className="space-y-4">
         <ResultSummary currentItem={currentItem} best={best} maxMargin={maxMargin} rubPerCny={rubPerCny} />
-
-        <CandidatesCard
-          rows={viewRows}
-          totalCount={top.length}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          sortKey={sortKey}
-          sortOrder={sortOrder}
-          onToggleSort={toggleSort}
-          best={best}
-          onOpenDetails={(t)=>{ setDetailsItem(t); setDetailsOpen(true); }}
+        {/* 列表筛选条：搜索 + 承运商/档位/配送/分组 */}
+        <ListFilterBar
+          query={query}
+          setQuery={setQuery}
+          carriers={carriers}
+          tiers={listTiers}
+          feasibleGroups={feasibleGroups}
+          carrier={listCarrier}
+          setCarrier={(v)=> { setListCarrier(v); setListTier(""); }}
+          tier={listTier}
+          setTier={setListTier}
+          delivery={listDelivery}
+          setDelivery={setListDelivery}
+          group={listGroupFilter || ""}
+          setGroup={setListGroupFilter}
+        />
+        <CarrierList
+          items={listAtPrice}
+          rubPerCny={rubPerCny}
+          onOpenDetails={(it: ResultItem) => { setDetailsItem(it); setDetailsOpen(true); }}
         />
       </section>
 
@@ -651,17 +666,38 @@ export default function OzonPage() {
         setLastmileMax={setLastmileMax}
         fxIncludeIntl={fxIncludeIntl}
         setFxIncludeIntl={setFxIncludeIntl}
-        rubPerCny={rubPerCny}
-        setRubPerCny={setRubPerCny}
-        loadingFx={loadingFx}
-        fxUpdatedAt={fxUpdatedAt}
-        fxSource={fxSource}
-        fxError={fxError}
-        onRefreshFx={refreshFx}
       />
 
-      {/* 详情 Dialog */}
-      <DetailsDialog open={detailsOpen} onOpenChange={setDetailsOpen} item={detailsItem} />
+      {/* 数据来源与更新时间 */}
+      <Dialog open={metaOpen} onOpenChange={setMetaOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>数据来源与更新时间</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <div>
+              <span className="text-muted-foreground">数据来源：</span>
+              <a href={getDataSourceUrl()} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline ml-1">
+                {getDataSourceUrl()}
+              </a>
+            </div>
+            <div className="max-h-[60vh] overflow-auto">
+              <div className="font-medium mb-1">各承运商数据时间</div>
+              <ul className="space-y-1">
+                {dataDates.map(({ carrier, date }) => (
+                  <li key={carrier} className="flex items-center justify-between">
+                    <span>{carrierName(carrier)}</span>
+                    <span className="text-muted-foreground">{date}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 方案详情弹框 */}
+      <DetailsDialog open={detailsOpen} onOpenChange={(v)=>{ setDetailsOpen(v); if(!v) setDetailsItem(null); }} item={detailsItem} />
     </div>
   );
 }

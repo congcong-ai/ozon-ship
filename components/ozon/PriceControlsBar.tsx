@@ -3,6 +3,7 @@
 import Slider from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import type { DeliveryMode } from "@/types/ozon";
+import { carrierName } from "@/lib/carrier_names";
 
 export default function PriceControlsBar({
   sliderRange,
@@ -88,7 +89,7 @@ export default function PriceControlsBar({
                 利润率：{(sliderBreakdown.margin*100).toFixed(2)}% · 利润：₽ {(sliderBreakdown.profit_cny * rubPerCny).toFixed(2)} / ¥ {sliderBreakdown.profit_cny.toFixed(2)}
               </div>
               <div>
-                货件分组：{activeGroup} · 国际物流费（{(chartTriple.carrier||"").toString().replace(/^./,s=>s.toUpperCase())} / {chartTriple.tier} / {deliveryZh(chartTriple.delivery)}）：₽ {sliderBreakdown.intl_logistics_rub.toFixed(2)}
+                货件分组：{activeGroup} · 国际物流费（{carrierName(chartTriple.carrier)} / {chartTriple.tier} / {deliveryZh(chartTriple.delivery)}）：₽ {sliderBreakdown.intl_logistics_rub.toFixed(2)}
               </div>
             </div>
           )}

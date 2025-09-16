@@ -9,8 +9,8 @@ export default function HomePage() {
   const [services, setServices] = useState<Service[]>([]);
   const [query, setQuery] = useState("");
 
-  const [unit, setUnit] = useState<"kg" | "g">("kg");
-  const [weightStr, setWeightStr] = useState<string>(""); // 输入为字符串，避免自动补0
+  const [unit, setUnit] = useState<"kg" | "g">("g");
+  const [weightStr, setWeightStr] = useState<string>("66"); // 默认66g，输入为字符串，避免自动补0
   const [dims, setDims] = useState({ l: 20, w: 15, h: 5 }); // cm
   const [state, setState] = useState<"solid" | "liquid" | "gas">("solid");
   const [battery, setBattery] = useState(false);
