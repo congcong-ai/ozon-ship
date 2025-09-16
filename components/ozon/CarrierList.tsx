@@ -3,14 +3,10 @@
 import type { ResultItem } from "@/types/ozon";
 import { carrierName } from "@/lib/carrier_names";
 import { Button } from "@/components/ui/button";
-import { useMemo } from "react";
-import { loadAllCarrierRates } from "@/lib/ozon_pricing";
 
 export default function CarrierList({ items, rubPerCny, onOpenDetails }: { items: ResultItem[]; rubPerCny: number; onOpenDetails: (it: ResultItem) => void }) {
-  const allRates = useMemo(() => loadAllCarrierRates(), []);
-  function findMeta(it: ResultItem) {
-    return allRates.find(r => r.carrier === it.carrier && r.tier === it.tier && r.delivery === it.delivery && r.group === it.group);
-  }
+  // 元信息直接来自 items（由计算阶段附带），避免再次加载所有费率表
+  function findMeta(it: ResultItem) { return { eta_days: it.eta_days, battery_allowed: it.battery_allowed }; }
   function deliveryZh(d: string) { return d === "door" ? "上门配送" : "取货点"; }
   function batteryBadge(v?: boolean) {
     if (v === true) return <span className="inline-flex items-center rounded border border-green-200 bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700">电池 允许</span>;

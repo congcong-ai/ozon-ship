@@ -3,22 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 // Dialog 已拆分至独立组件
 import { PackageSearch, Info } from "lucide-react";
-import { bestPricingWithAutoLoad, loadAllCarrierRates, OZON_GROUP_RULES, computeProfitForPrice } from "@/lib/ozon_pricing";
-import type { DeliveryMode, OzonPricingParams, ResultItem, OzonGroup } from "@/types/ozon";
+import { bestPricing, OZON_GROUP_RULES, computeProfitForPrice, ALL_CARRIERS } from "@/lib/ozon_pricing";
+import type { DeliveryMode, OzonPricingParams, ResultItem, OzonGroup, OzonRateTable } from "@/types/ozon";
+import { loadAllCarrierRatesCached, loadCarrierRatesCachedStrict } from "@/lib/rates_cache";
+import { computeListViaWorker } from "@/lib/worker_client";
 import { useOzonChart } from "@/hooks/useOzonChart";
-import ProductParamsCard from "@/components/ozon/ProductParamsCard";
-import ProfitCostCard from "@/components/ozon/ProfitCostCard";
-import LogisticsFilterCard from "@/components/ozon/LogisticsFilterCard";
-import ResultSummary from "@/components/ozon/ResultSummary";
-import SettingsDialog from "@/components/ozon/SettingsDialog";
-import PriceChartCard from "@/components/ozon/PriceChartCard";
-import CarrierList from "@/components/ozon/CarrierList";
-import ListFilterBar from "@/components/ozon/ListFilterBar";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { getDataSourceUrl, getAllDataDates } from "@/lib/ozon_data_meta";
 import { carrierName } from "@/lib/carrier_names";
-import DetailsDialog from "@/components/ozon/DetailsDialog";
 
 // 组别颜色映射（保持跨渲染稳定）
 const GROUP_COLORS: Record<OzonGroup, string> = {
@@ -30,11 +23,38 @@ const GROUP_COLORS: Record<OzonGroup, string> = {
   "Premium Big": "#a855f7",   // purple-500
 };
 
+// 动态导入重型组件，降低首屏 bundle 体积
+const ProductParamsCard = dynamic(() => import("@/components/ozon/ProductParamsCard"), {
+  loading: () => <div className="h-48 rounded-lg border bg-slate-50 animate-pulse" />,
+});
+const ProfitCostCard = dynamic(() => import("@/components/ozon/ProfitCostCard"), {
+  loading: () => <div className="h-48 rounded-lg border bg-slate-50 animate-pulse" />,
+});
+const LogisticsFilterCard = dynamic(() => import("@/components/ozon/LogisticsFilterCard"), {
+  loading: () => <div className="h-48 rounded-lg border bg-slate-50 animate-pulse" />,
+});
+const PriceChartCard = dynamic(() => import("@/components/ozon/PriceChartCard"), {
+  loading: () => <div className="h-80 rounded-lg border bg-slate-50 animate-pulse" />,
+});
+const ResultSummary = dynamic(() => import("@/components/ozon/ResultSummary"), {
+  loading: () => <div className="h-10 rounded bg-slate-50 animate-pulse" />,
+});
+const CarrierList = dynamic(() => import("@/components/ozon/CarrierList"), {
+  loading: () => <div className="h-64 rounded border bg-slate-50 animate-pulse" />,
+});
+const ListFilterBar = dynamic(() => import("@/components/ozon/ListFilterBar"), {
+  loading: () => <div className="h-10 rounded border bg-slate-50 animate-pulse" />,
+});
+const SettingsDialog = dynamic(() => import("@/components/ozon/SettingsDialog"), { ssr: false });
+const DetailsDialog = dynamic(() => import("@/components/ozon/DetailsDialog"), { ssr: false });
+
+// 数据来源链接常量（避免为了一个常量而引入整包 meta JSON）
+const DATA_SOURCE_URL = "https://docs.ozon.ru/global/zh-hans/fulfillment/rfbs/logistic-settings/partner-delivery-ozon/?country=CN";
 
 export default function OzonPage() {
   const LS_KEY = "ozon_page_state_v1";
-  const rates = useMemo(() => loadAllCarrierRates(), []);
-  const carriers = useMemo(() => Array.from(new Set(rates.map((r) => r.carrier))), [rates]);
+  const [rates, setRates] = useState<OzonRateTable[]>([]);
+  const carriers = useMemo(() => ALL_CARRIERS as unknown as string[], []);
   // 顶部“物流选择（可选）”——用于利润率曲线，仅限制图表
   const [chartCarrier, setChartCarrier] = useState<string>("");
   const chartTiers = useMemo(() => {
@@ -99,7 +119,84 @@ export default function OzonPage() {
   const [priceInput, setPriceInput] = useState<string | null>(null);
   // 列表筛选用的分组过滤（空 = 使用当前售价推断的组）
   const [listGroupFilter, setListGroupFilter] = useState<OzonGroup | "">("");
-  const dataDates = useMemo(() => getAllDataDates(), []);
+  const [dataDates, setDataDates] = useState<{ carrier: string; date: string }[]>([]);
+  // “查看更多”展开与手动计算状态
+  const [listExpanded, setListExpanded] = useState<boolean>(false);
+  const [computedList, setComputedList] = useState<ResultItem[]>([]);
+  const [computingList, setComputingList] = useState<boolean>(false);
+  const [allRatesReady, setAllRatesReady] = useState<boolean>(false);
+
+  // 懒加载 Rate 数据（分阶段）：
+  // 1) 先加载当前选择的承运商（若为空，则选第一个）以支持图表；
+  // 2) 页面空闲时再加载全部（从缓存命中则几乎无开销）。
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const first = (chartCarrier && chartCarrier.length ? chartCarrier : (ALL_CARRIERS[0] as string));
+        const one = await loadCarrierRatesCachedStrict(first);
+        if (!cancelled) setRates(one);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // 不做“全量预取”，仅在需要时按需加载（进一步分片）
+
+  // 空闲预热：为提升“推荐结果”的全面性，在首屏稳定后后台预取全量承运商（命中缓存时几乎无网络/CPU开销）
+  useEffect(() => {
+    let cancelled = false;
+    let fired = false;
+    const preheat = async () => {
+      if (fired) return; fired = true;
+      try {
+        const all = await loadAllCarrierRatesCached();
+        if (cancelled) return;
+        setRates(prev => (all.length > prev.length ? all : prev));
+        setAllRatesReady(true);
+      } catch {}
+    };
+    if (typeof (window as any).requestIdleCallback === 'function') {
+      (window as any).requestIdleCallback(() => preheat());
+    }
+    // 无论如何在 ~1s 后确保触发一次
+    const t = setTimeout(() => preheat(), 1000);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, []);
+
+  // 当用户选择了新的承运商且当前 rates 尚未包含其数据时，按需加载并合并
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const id = chartCarrier;
+      if (!id) return; // 空表示全部/未选
+      const exists = rates.some(r => r.carrier === id);
+      if (exists) return;
+      try {
+        const part = await loadCarrierRatesCachedStrict(id);
+        if (!cancelled && part && part.length) {
+          setRates(prev => [...prev, ...part]);
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [chartCarrier, rates]);
+
+  // 当底部列表筛选选择了某承运商时，按需加载其费率
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const id = listCarrier;
+      if (!id) return;
+      const exists = rates.some(r => r.carrier === id);
+      if (exists) return;
+      try {
+        const part = await loadCarrierRatesCachedStrict(id);
+        if (!cancelled && part && part.length) setRates(prev => [...prev, ...part]);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [listCarrier, rates]);
 
   // 售价滑块与利润率曲线
   const [sliderPrice, setSliderPrice] = useState<number | null>(null);
@@ -160,6 +257,15 @@ export default function OzonPage() {
       }
     } catch {}
   }, []);
+
+  // 懒加载数据来源元信息（避免在首屏打包所有 meta JSON）
+  useEffect(() => {
+    if (!metaOpen) return;
+    if (dataDates.length > 0) return;
+    import("@/lib/ozon_data_meta").then((m) => {
+      try { setDataDates(m.getAllDataDates()); } catch {}
+    }).catch(() => {});
+  }, [metaOpen, dataDates.length]);
 
   // 写入页面状态（关键输入变更时）
   useEffect(() => {
@@ -259,7 +365,7 @@ export default function OzonPage() {
     }
   }, [rubFxMode]);
 
-  // 自动计算：当任一参数变化时即时刷新；仅在结果变化时更新状态
+  // 自动计算：当任一参数变化且“全量承运商”已就绪时刷新；仅在结果变化时更新状态
   useEffect(() => {
     const params: OzonPricingParams = {
       weight_g: weightG,
@@ -277,7 +383,8 @@ export default function OzonPage() {
       tier: chartTier || undefined,
       delivery: (chartDelivery || undefined) as any,
     };
-    const out = bestPricingWithAutoLoad(params, 1);
+    if (!allRatesReady) return;
+    const out = bestPricing(params, { candidates: rates }, 1);
     setBest((prev)=>{
       const changed = !prev || !out.best || prev.price_rub !== out.best.price_rub || prev.carrier!==out.best.carrier || prev.tier!==out.best.tier || prev.delivery!==out.best.delivery;
       return changed ? out.best : prev;
@@ -287,7 +394,7 @@ export default function OzonPage() {
       const sameAll = sameLen && prev.every((v,i)=> v.price_rub===out.top[i].price_rub && v.carrier===out.top[i].carrier && v.tier===out.top[i].tier && v.delivery===out.top[i].delivery);
       return sameAll ? prev : out.top;
     });
-  }, [weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl, minMargin, maxMargin, chartCarrier, chartTier, chartDelivery]);
+  }, [allRatesReady, rates, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl, minMargin, maxMargin, chartCarrier, chartTier, chartDelivery]);
 
   // 选取用于曲线与滑块的“激活费率 + 组”
   // 仅按重量可行的组
@@ -481,52 +588,59 @@ export default function OzonPage() {
       breakdown,
       safe_range: null,
       constraint_ok: true,
+      eta_days: rateAtSliderPrice.eta_days,
+      battery_allowed: rateAtSliderPrice.battery_allowed,
     };
     return item;
   }, [sliderPrice, rateAtSliderPrice?.carrier, rateAtSliderPrice?.tier, rateAtSliderPrice?.delivery, groupAtSliderPrice, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl]);
 
-  // 当前售价下：该组内所有承运商的实时列表
-  const listAtPrice = useMemo(() => {
-    if (sliderPrice === null) return [] as ResultItem[];
-    const params: OzonPricingParams = {
-      weight_g: weightG,
-      dims_cm: dims,
-      cost_cny: costCny,
-      commission,
-      acquiring,
-      fx,
-      last_mile: { rate: lastmileRate, min_rub: lastmileMin, max_rub: lastmileMax },
-      rub_per_cny: rubPerCny,
-      fx_include_intl: fxIncludeIntl,
-    } as OzonPricingParams;
-    // 选中的分组（为空则使用当前售价推断的分组）
+  // 手动触发计算：仅在点击“更新列表/计算”时计算当前售价下的列表
+  const handleRecomputeList = async () => {
+    if (sliderPrice === null) { setComputedList([]); return; }
+    setComputingList(true);
     const gPick = listGroupFilter || groupAtSliderPrice;
     const rule = OZON_GROUP_RULES.find(r => r.group === gPick);
     const inGroupRange = !rule || (sliderPrice >= rule.priceRub.min && sliderPrice <= rule.priceRub.max && weightG >= rule.weightG.min && weightG <= rule.weightG.max);
-    const rs = rates
-      .filter(r => r.group === gPick)
+    // 确保已加载所需承运商数据
+    let baseRates: OzonRateTable[] = [];
+    if (listCarrier) {
+      baseRates = await loadCarrierRatesCachedStrict(listCarrier);
+    } else {
+      baseRates = await loadAllCarrierRatesCached();
+    }
+    // 在发送给 Worker 前按“档位/配送”做一次预过滤，减少计算与消息体大小
+    const allRates = baseRates.filter(r => (!listTier || r.tier === listTier) && (!listDelivery || r.delivery === listDelivery));
+    const list = await computeListViaWorker({
+      sliderPrice,
+      group: gPick,
+      rates: allRates,
+      params: {
+        weight_g: weightG,
+        dims_cm: dims,
+        cost_cny: costCny,
+        commission,
+        acquiring,
+        fx,
+        last_mile: { rate: lastmileRate, min_rub: lastmileMin, max_rub: lastmileMax },
+        rub_per_cny: rubPerCny,
+        fx_include_intl: fxIncludeIntl,
+      } as OzonPricingParams,
+    });
+    const rs = list.slice().sort((a,b)=> b.breakdown.margin - a.breakdown.margin || a.price_rub - b.price_rub);
+    setComputedList(inGroupRange ? rs : []);
+    setComputingList(false);
+  };
+
+  // 基于搜索关键字对“已计算结果”做前端筛选（轻量操作，无需重算）
+  const filteredComputedList = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const base = computedList
       .filter(r => !listCarrier || r.carrier === listCarrier)
       .filter(r => !listTier || r.tier === listTier)
       .filter(r => !listDelivery || r.delivery === listDelivery)
-      .map(r => {
-        const breakdown = computeProfitForPrice(sliderPrice, groupAtSliderPrice, r.pricing, params);
-        return {
-          price_rub: sliderPrice,
-          group: gPick,
-          carrier: r.carrier,
-          tier: r.tier,
-          delivery: r.delivery,
-          breakdown,
-          safe_range: null,
-          constraint_ok: true,
-        } as ResultItem;
-      });
-    rs.sort((a,b)=> b.breakdown.margin - a.breakdown.margin || a.price_rub - b.price_rub);
-    const q = query.trim().toLowerCase();
-    let out = q ? rs.filter(r => [r.carrier,r.tier,r.delivery,r.group].join(" ").toLowerCase().includes(q)) : rs;
-    if (rule && !inGroupRange) out = [];
-    return out;
-  }, [sliderPrice, rates, groupAtSliderPrice, listGroupFilter, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl, listCarrier, listTier, listDelivery, query]);
+      .filter(r => !listGroupFilter || r.group === listGroupFilter);
+    return q ? base.filter(r => [r.carrier, r.tier, r.delivery, r.group].join(" ").toLowerCase().includes(q)) : base;
+  }, [computedList, query, listCarrier, listTier, listDelivery, listGroupFilter]);
 
   return (
     <div className="py-6 space-y-6">
@@ -537,7 +651,7 @@ export default function OzonPage() {
         </div>
       </div>
       <div className="text-sm text-muted-foreground flex flex-col gap-1">
-        <p>填写上方参数，自动计算推荐售价与候选方案。</p>
+        <p>填写下方参数，滑动价格，自动推荐物流商，并计算利润情况。</p>
         <div className="flex items-center gap-2 flex-wrap">
           <a
             href="#"
@@ -624,28 +738,50 @@ export default function OzonPage() {
       ) : null}
       {/* 结果区：整屏宽度 */}
       <section className="space-y-4">
-        <ResultSummary currentItem={currentItem} best={best} maxMargin={maxMargin} rubPerCny={rubPerCny} />
-        {/* 列表筛选条：搜索 + 承运商/档位/配送/分组 */}
-        <ListFilterBar
-          query={query}
-          setQuery={setQuery}
-          carriers={carriers}
-          tiers={listTiers}
-          feasibleGroups={feasibleGroups}
-          carrier={listCarrier}
-          setCarrier={(v)=> { setListCarrier(v); setListTier(""); }}
-          tier={listTier}
-          setTier={setListTier}
-          delivery={listDelivery}
-          setDelivery={setListDelivery}
-          group={listGroupFilter || ""}
-          setGroup={setListGroupFilter}
-        />
-        <CarrierList
-          items={listAtPrice}
-          rubPerCny={rubPerCny}
-          onOpenDetails={(it: ResultItem) => { setDetailsItem(it); setDetailsOpen(true); }}
-        />
+        <ResultSummary currentItem={currentItem} best={best} maxMargin={maxMargin} rubPerCny={rubPerCny} loadingBest={!allRatesReady} />
+
+        {!listExpanded ? (
+          <div className="flex justify-center">
+            <Button onClick={() => setListExpanded(true)}>查看更多</Button>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-sm text-muted-foreground">
+                此售价 {sliderPrice !== null ? `₽ ${sliderPrice.toFixed(2)}` : "-"} 时所有物流商运费及对应利润情况
+              </div>
+              <div>
+                <Button size="sm" onClick={handleRecomputeList} disabled={computingList || sliderPrice === null}>
+                  {computingList ? "计算中..." : "更新列表/计算"}
+                </Button>
+              </div>
+            </div>
+            {/* 列表筛选条：搜索 + 承运商/档位/配送/分组（更改后需点击上方按钮重新计算） */}
+            <ListFilterBar
+              query={query}
+              setQuery={setQuery}
+              carriers={carriers}
+              tiers={listTiers}
+              feasibleGroups={feasibleGroups}
+              carrier={listCarrier}
+              setCarrier={(v)=> { setListCarrier(v); setListTier(""); }}
+              tier={listTier}
+              setTier={setListTier}
+              delivery={listDelivery}
+              setDelivery={setListDelivery}
+              group={listGroupFilter || ""}
+              setGroup={setListGroupFilter}
+            />
+            {computedList.length === 0 && !computingList ? (
+              <div className="text-sm text-muted-foreground">点击“更新列表/计算”以计算当前售价下的渠道列表</div>
+            ) : null}
+            <CarrierList
+              items={filteredComputedList}
+              rubPerCny={rubPerCny}
+              onOpenDetails={(it: ResultItem) => { setDetailsItem(it); setDetailsOpen(true); }}
+            />
+          </>
+        )}
       </section>
 
       {/* 更多设置 Dialog */}
@@ -677,8 +813,8 @@ export default function OzonPage() {
           <div className="space-y-3 text-sm">
             <div>
               <span className="text-muted-foreground">数据来源：</span>
-              <a href={getDataSourceUrl()} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline ml-1">
-                {getDataSourceUrl()}
+              <a href={DATA_SOURCE_URL} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline ml-1">
+                {DATA_SOURCE_URL}
               </a>
             </div>
             <div className="max-h-[60vh] overflow-auto">

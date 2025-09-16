@@ -1,38 +1,25 @@
 import type { CarrierDetail } from "@/types/ozon_details";
-import abt from "@/data/details/abt.json";
-import atc from "@/data/details/atc.json";
-import cel from "@/data/details/cel.json";
-import chinapost from "@/data/details/chinapost.json";
-import guoo from "@/data/details/guoo.json";
-import iml from "@/data/details/iml.json";
-import leader from "@/data/details/leader.json";
-import oyx from "@/data/details/oyx.json";
-import rets from "@/data/details/rets.json";
-import tanais from "@/data/details/tanais.json";
-import uni from "@/data/details/uni.json";
-import ural from "@/data/details/ural.json";
-import xy from "@/data/details/xy.json";
-import zto from "@/data/details/zto.json";
 
-export const ALL_CARRIER_DETAILS: Record<string, CarrierDetail> = {
-  abt,
-  atc,
-  cel,
-  chinapost,
-  guoo,
-  iml,
-  leader,
-  oyx,
-  rets,
-  tanais,
-  uni,
-  ural,
-  xy,
-  zto,
-};
-
-export function getCarrierDetail(id: string): CarrierDetail | null {
+// 动态详情获取（避免顶层静态引入不存在的 JSON 导致构建失败）
+export async function getCarrierDetailAsync(id: string): Promise<CarrierDetail | null> {
   if (!id) return null;
   const k = String(id).toLowerCase();
-  return ALL_CARRIER_DETAILS[k] || null;
+  // 尝试通过运行时 URL 拉取（若部署将 details JSON 放入 public/details/）
+  try {
+    const url = `/details/${encodeURIComponent(k)}.json`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      return data as CarrierDetail;
+    }
+  } catch {}
+  // 若无静态资源，则返回空（当前 UI 未依赖该详情，安全降级）
+  return null;
 }
+
+// 同步占位：兼容旧 API，改为始终返回 null
+export function getCarrierDetail(_id: string): CarrierDetail | null {
+  return null;
+}
+
+export const ALL_CARRIER_DETAILS: Record<string, CarrierDetail> = {};

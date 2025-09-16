@@ -18,6 +18,61 @@ export type PriceChartSets = {
   xSegments?: { priceMin: number; priceMax: number; xMin: number; xMax: number; group: OzonGroup }[];
 };
 
+// 识别“价格上升但利润下降”的连续区间
+// 返回各区间的索引范围及便捷信息
+function calcDescendingRanges(points: PriceChartPoint[]) {
+  const ranges: { start: number; end: number }[] = [];
+  const eps = 1e-6;
+  if (!points || points.length < 2) return ranges;
+  let start = -1;
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i];
+    const b = points[i + 1];
+    // price 单调递增（采样保证），当利润严格下降则认为是风险区
+    if (b.margin <= a.margin - eps) {
+      if (start === -1) start = i;
+    } else {
+      if (start !== -1) { ranges.push({ start, end: i + 1 }); start = -1; }
+    }
+  }
+  if (start !== -1) ranges.push({ start, end: points.length - 1 });
+  // 过滤掉非常短的片段（像素过短无意义）
+  return ranges.filter(r => {
+    const x0 = points[r.start].x, x1 = points[r.end].x;
+    const p0 = points[r.start].price, p1 = points[r.end].price;
+    return Math.abs(x1 - x0) >= 6 && Math.abs(p1 - p0) >= 0.01;
+  });
+}
+
+// 识别“价格更高但利润反而低”的区间（基于历史最高利润的回撤）
+// 当利润低于已出现的历史最高利润 lastMaxMargin（容差 tol）时开始；
+// 当利润重新回到 >= lastMaxMargin - tol 时闭合区间。
+function calcDominatedRegions(points: PriceChartPoint[]) {
+  const regions: { startIndex: number; endIndex: number }[] = [];
+  if (!points || points.length < 2) return regions;
+  const tol = 1e-3; // 0.1% 容差，避免抖动
+  let lastMaxMargin = -Infinity;
+  let lastMaxIndex = 0;
+  let activeStart: number | null = null; // 记录开始于“上一次最高利润对应的点”
+  for (let i = 0; i < points.length; i++) {
+    const m = points[i].margin;
+    if (m >= lastMaxMargin - tol) {
+      // 达到或超过历史高点：更新高点
+      if (activeStart !== null) {
+        // 回到高点，闭合区间，右端点取当前点
+        regions.push({ startIndex: activeStart, endIndex: i });
+        activeStart = null;
+      }
+      lastMaxMargin = Math.max(lastMaxMargin, m);
+      lastMaxIndex = i;
+    } else {
+      // 掉到历史高点之下：若还没有活跃区间，则以“历史高点位置”为左端点开启区间
+      if (activeStart === null) activeStart = lastMaxIndex;
+    }
+  }
+  return regions;
+}
+
 export default function PriceChart({
   chart,
   sliderPrice,
@@ -55,6 +110,7 @@ export default function PriceChart({
   const scaleX = innerW / vbW;
 
   const allPoints = useMemo(() => chart.sets.flatMap((s) => s.points), [chart.sets]);
+  const [hoverRegionIndex, setHoverRegionIndex] = useState<number | null>(null);
   const legend = useMemo(() => {
     const m = new Map<OzonGroup, string>();
     for (const s of chart.sets) {
@@ -102,6 +158,12 @@ export default function PriceChart({
         dragRef.current.active = false;
       }}
     >
+      {/* 警示区域网格填充 pattern */}
+      <defs>
+        <pattern id="ozon-warn-hatch" patternUnits="userSpaceOnUse" width="5" height="5">
+          <path d="M0 0 L5 5 M5 0 L0 5" stroke="#ef4444" strokeWidth="1.2" strokeOpacity="0.95" />
+        </pattern>
+      </defs>
       {/* 背景网格与轴 */}
       <rect x="0" y="0" width={vbW} height={vbH} fill="#fff" />
       {/* 利润率刻度：下限 / 中位 / 上限（网格从留白后开始） */}
@@ -168,6 +230,84 @@ export default function PriceChart({
             }}
           />
         ))}
+
+        {/* 价格更高但利润反而更低：用沿折线的浅色背景带标出整个区间（无竖线） */}
+        {(() => {
+          const regions = calcDominatedRegions(allPoints);
+          if (!regions.length) return null;
+          return regions.map((r: { startIndex: number; endIndex: number }, idx: number) => {
+            const pts = allPoints.slice(r.startIndex, r.endIndex + 1);
+            if (!pts.length) return null;
+            const pL = pts[0];
+            const pR = pts[pts.length - 1];
+            // 矩形覆盖整个图表高度
+            const xL = pL.x; const xR = pR.x; const w = Math.max(2, xR - xL);
+            const tipX = (xL + xR) / 2; const tipY = 22; // 顶部固定位置
+            return (
+              <g key={`dominated-${idx}`}>
+                <rect
+                  x={xL}
+                  y={0}
+                  width={w}
+                  height={vbH}
+                  fill="#ef4444"
+                  opacity={0.12}
+                  pointerEvents="all"
+                  style={{ cursor: "pointer" }}
+                  onMouseEnter={() => setHoverRegionIndex(idx)}
+                  onMouseLeave={() => setHoverRegionIndex(null)}
+                  onMouseDown={(e) => {
+                    const svg = (e.currentTarget as SVGRectElement).ownerSVGElement as SVGSVGElement;
+                    if (!svg) return;
+                    const rect = svg.getBoundingClientRect();
+                    const xCss = e.clientX - rect.left;
+                    const xSvg = (xCss / Math.max(1, rect.width)) * vbW;
+                    const x = (xSvg - padLeft) / Math.max(1e-6, scaleX);
+                    let bestI = 0, bestD = Number.POSITIVE_INFINITY;
+                    for (let i = 0; i < pts.length; i++) {
+                      const d = Math.abs(pts[i].x - x);
+                      if (d < bestD) { bestD = d; bestI = i; }
+                    }
+                    const pt = pts[bestI];
+                    dragRef.current.active = true;
+                    setHoverPoint(pt);
+                    onDragToPrice(Math.round(pt.price * 100) / 100);
+                  }}
+                  onMouseMove={(e) => {
+                    const svg = (e.currentTarget as SVGRectElement).ownerSVGElement as SVGSVGElement;
+                    if (!svg) return;
+                    const rect = svg.getBoundingClientRect();
+                    const xCss = e.clientX - rect.left;
+                    const yCss = e.clientY - rect.top;
+                    const xSvg = (xCss / Math.max(1, rect.width)) * vbW;
+                    const ySvg = (yCss / Math.max(1, rect.height)) * vbH;
+                    const x = (xSvg - padLeft) / Math.max(1e-6, scaleX);
+                    let bestI = 0, bestD = Number.POSITIVE_INFINITY;
+                    for (let i = 0; i < pts.length; i++) {
+                      const dx = pts[i].x - x;
+                      const dy = pts[i].y - ySvg;
+                      const d = Math.hypot(dx, dy);
+                      if (d < bestD) { bestD = d; bestI = i; }
+                    }
+                    const pt = pts[bestI];
+                    setHoverPoint(pt);
+                    if (dragRef.current.active) onDragToPrice(Math.round(pt.price * 100) / 100);
+                  }}
+                >
+                </rect>
+                {/* 自定义悬浮提示气泡（仅在 hover 时显示） */}
+                {hoverRegionIndex === idx && (
+                  <g transform={`translate(${tipX.toFixed(1)}, ${tipY.toFixed(1)})`} pointerEvents="none">
+                    <rect x={-130} y={-16} width={260} height={24} rx={6} ry={6} fill="#fee2e2" stroke="#ef4444" opacity={0.95} />
+                    <text x={0} y={0} textAnchor="middle" dominantBaseline="middle" fontSize={10} fill="#991b1b">
+                      {`此区域提高价格 利润反而降低：₽ ${pL.price.toFixed(2)} - ₽ ${pR.price.toFixed(2)}`}
+                    </text>
+                  </g>
+                )}
+              </g>
+            );
+          });
+        })()}
 
         {/* 当前价竖线（压缩坐标） */}
         {sliderPrice !== null && isFinite(sliderPrice) && (

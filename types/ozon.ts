@@ -82,4 +82,7 @@ export type ResultItem = {
   safe_range: { from: number; to: number } | null; // 安全区间 [from,to]
   constraint_ok?: boolean; // 是否满足利润率约束
   note?: string; // 说明文案（如不满足约束时的提示）
+  // 便于前端展示而无需再次加载完整费率表
+  eta_days?: string;
+  battery_allowed?: boolean;
 };

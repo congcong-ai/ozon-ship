@@ -292,43 +292,31 @@ function neighborsBelow(values: number[], radius: number = 20): number[] {
 // ------------------------------
 // 5) Rate 数据加载（按“每家一个 JSON”）
 // ------------------------------
-// 汇总载入 data/ 目录下的各承运商静态 JSON（除 ChinaPost 外）。
+// 通过动态 import 懒加载，避免顶层静态导入导致的首包膨胀。
 
-import ural from "@/data/ozon_ural.json";
-import abt from "@/data/ozon_abt.json";
-import atc from "@/data/ozon_atc.json";
-import cel from "@/data/ozon_cel.json";
-import guoo from "@/data/ozon_guoo.json";
-import iml from "@/data/ozon_iml.json";
-import leader from "@/data/ozon_leader.json";
-import oyx from "@/data/ozon_oyx.json";
-import rets from "@/data/ozon_rets.json";
-import tanais from "@/data/ozon_tanais.json";
-import uni from "@/data/ozon_uni.json";
-import xy from "@/data/ozon_xy.json";
-import zto from "@/data/ozon_zto.json";
-
-export function loadAllCarrierRates(): OzonRateTable[] {
+/**
+ * 懒加载所有承运商费率（动态 import 按文件分片），仅在调用时读取 JSON。
+ * 注意：不要在首屏同步调用，以免阻塞；建议在交互或空闲时触发。
+ */
+export async function loadAllCarrierRatesAsync(): Promise<OzonRateTable[]> {
+  const mods = await Promise.all(ALL_CARRIERS.map(id => CARRIER_IMPORTERS[id]()));
   const arr: OzonRateTable[] = [];
-  const sources = [
-    ural,
-    abt,
-    atc,
-    cel,
-    guoo,
-    iml,
-    leader,
-    oyx,
-    rets,
-    tanais,
-    uni,
-    xy,
-    zto,
-  ];
-  for (const src of sources) {
-    if (src && (src as any).rates) arr.push(...(((src as any).rates) as OzonRateTable[]));
+  for (const m of mods) {
+    const src: any = (m as any).default ?? (m as any);
+    if (src && Array.isArray(src.rates)) {
+      arr.push(...(src.rates as OzonRateTable[]));
+    }
   }
   return arr;
+}
+
+// 为兼容历史 API，保留一个同步函数占位，但不再在其中打包 JSON。
+export function loadAllCarrierRates(): OzonRateTable[] {
+  if (process.env.NODE_ENV !== "production") {
+    // 提示：同步 API 已不再返回完整数据，请改用 loadAllCarrierRatesAsync()
+    // console.warn("loadAllCarrierRates(): empty in dev, use loadAllCarrierRatesAsync() instead");
+  }
+  return [] as OzonRateTable[];
 }
 
 // ------------------------------
@@ -388,6 +376,8 @@ export function bestPricing(
           delivery: rate.delivery,
           breakdown,
           safe_range: { from: Math.max(rule.priceRub.min, P - δ), to: P },
+          eta_days: rate.eta_days,
+          battery_allowed: rate.battery_allowed,
         };
         topList.push(item);
       }
@@ -446,5 +436,31 @@ export function bestPricing(
 }
 
 export function bestPricingWithAutoLoad(params: OzonPricingParams, topN: number = 3) {
+  // 已弃用：同步自动加载将返回空集。请在调用方使用 loadAllCarrierRatesAsync 后传入 dataset。
   return bestPricing(params, { rules: OZON_GROUP_RULES, candidates: loadAllCarrierRates() }, topN);
 }
+
+export async function bestPricingWithAutoLoadAsync(params: OzonPricingParams, topN: number = 3) {
+  const candidates = await loadAllCarrierRatesAsync();
+  return bestPricing(params, { rules: OZON_GROUP_RULES, candidates }, topN);
+}
+
+// 对外暴露承运商清单与 importer 映射，供缓存层与按需分片加载使用
+export const ALL_CARRIERS = [
+  'ural','abt','atc','cel','guoo','iml','leader','oyx','rets','tanais','uni','xy','zto'
+] as const;
+export const CARRIER_IMPORTERS: Record<(typeof ALL_CARRIERS)[number], () => Promise<any>> = {
+  ural:   () => import("@/data/ozon_ural.json"),
+  abt:    () => import("@/data/ozon_abt.json"),
+  atc:    () => import("@/data/ozon_atc.json"),
+  cel:    () => import("@/data/ozon_cel.json"),
+  guoo:   () => import("@/data/ozon_guoo.json"),
+  iml:    () => import("@/data/ozon_iml.json"),
+  leader: () => import("@/data/ozon_leader.json"),
+  oyx:    () => import("@/data/ozon_oyx.json"),
+  rets:   () => import("@/data/ozon_rets.json"),
+  tanais: () => import("@/data/ozon_tanais.json"),
+  uni:    () => import("@/data/ozon_uni.json"),
+  xy:     () => import("@/data/ozon_xy.json"),
+  zto:    () => import("@/data/ozon_zto.json"),
+};
