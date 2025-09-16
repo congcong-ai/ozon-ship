@@ -8,7 +8,7 @@ export default function MobileTabBar() {
       <div className="mx-auto grid max-w-6xl grid-cols-3">
         <Tab href="/" label="邮政" icon={<Mail className="h-5 w-5" />} />
         <Tab href="/ozon" label="Ozon" icon={<Package className="h-5 w-5" />} />
-        <Tab href="/me" label="我的" icon={<User className="h-5 w-5" />} />
+        <Tab href="/me" label="简介" icon={<User className="h-5 w-5" />} />
       </div>
     </nav>
   );

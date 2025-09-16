@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 const items = [
   { href: "/", label: "邮政" },
   { href: "/ozon", label: "Ozon" },
-  { href: "/me", label: "我的" },
+  { href: "/me", label: "简介" },
 ];
 
 export default function TopNav() {
