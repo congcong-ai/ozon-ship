@@ -489,6 +489,9 @@ export default function OzonPage() {
   // 程序性更新标记：用于避免 setSliderPrice 导致的自动切组循环
   const progRef = useRef<boolean>(false);
 
+  // 最近一次 sliderPrice，用于判断“用户移动后自动收起列表”
+  const lastSliderRef = useRef<number | null>(null);
+
   // 使用 Hook 计算拼接曲线与全局端点（强制包含端点，保证铺满宽度）
   const chartParams: OzonPricingParams = {
     weight_g: weightG,
@@ -542,6 +545,17 @@ export default function OzonPage() {
     const g = groupFromPrice(sliderPrice);
     if (g && g !== activeGroup) setGroupMode(g);
   }, [sliderPrice, weightG, groupMode, activeGroup]);
+
+  // 当“价格滑动杆/曲线”导致售价变化时，若列表已展开，则自动收起为“查看更多”
+  useEffect(() => {
+    if (!listExpanded) { lastSliderRef.current = sliderPrice; return; }
+    // 忽略程序性更新（例如区间吸附、阈值变化引发的设置）
+    if (progRef.current) { lastSliderRef.current = sliderPrice; return; }
+    if (sliderPrice !== lastSliderRef.current) {
+      setListExpanded(false);
+    }
+    lastSliderRef.current = sliderPrice;
+  }, [sliderPrice, listExpanded]);
 
 
   // 已移除 groupOrder：统一按全局区间绘制，不做图上边缘自动换段
@@ -608,8 +622,8 @@ export default function OzonPage() {
     } else {
       baseRates = await loadAllCarrierRatesCached();
     }
-    // 在发送给 Worker 前按“档位/配送”做一次预过滤，减少计算与消息体大小
-    const allRates = baseRates.filter(r => (!listTier || r.tier === listTier) && (!listDelivery || r.delivery === listDelivery));
+    // 不再按“档位/配送”预过滤，统一计算出全量，后续仅在前端做过滤
+    const allRates = baseRates;
     const list = await computeListViaWorker({
       sliderPrice,
       group: gPick,
@@ -631,6 +645,13 @@ export default function OzonPage() {
     setComputingList(false);
   };
 
+  // 展开瞬间自动计算；后续筛选变更仅在前端过滤已计算结果，不触发重算
+  useEffect(() => {
+    if (!listExpanded) return;
+    handleRecomputeList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listExpanded]);
+
   // 基于搜索关键字对“已计算结果”做前端筛选（轻量操作，无需重算）
   const filteredComputedList = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -651,7 +672,7 @@ export default function OzonPage() {
         </div>
       </div>
       <div className="text-sm text-muted-foreground flex flex-col gap-1">
-        <p>填写下方参数，滑动价格，自动推荐物流商，并计算利润情况。</p>
+        {/* <p>填写下方参数，滑动价格，自动推荐物流商，并计算利润情况。</p> */}
         <div className="flex items-center gap-2 flex-wrap">
           <a
             href="#"
@@ -747,16 +768,12 @@ export default function OzonPage() {
         ) : (
           <>
             <div className="flex items-center justify-between gap-2">
-              <div className="text-sm text-muted-foreground">
-                此售价 {sliderPrice !== null ? `₽ ${sliderPrice.toFixed(2)}` : "-"} 时所有物流商运费及对应利润情况
-              </div>
-              <div>
-                <Button size="sm" onClick={handleRecomputeList} disabled={computingList || sliderPrice === null}>
-                  {computingList ? "计算中..." : "更新列表/计算"}
-                </Button>
-              </div>
+            <h2 className="font-medium">
+                售价 {sliderPrice !== null ? `₽ ${sliderPrice.toFixed(2)}` : "-"} 时所有物流商运费及对应利润情况
+              </h2>
+              {/* 移除“更新列表/计算”按钮，改为自动计算 */}
             </div>
-            {/* 列表筛选条：搜索 + 承运商/档位/配送/分组（更改后需点击上方按钮重新计算） */}
+            {/* 列表筛选条：搜索 + 承运商/档位/配送/分组（仅前端过滤，不触发重算） */}
             <ListFilterBar
               query={query}
               setQuery={setQuery}
@@ -772,8 +789,11 @@ export default function OzonPage() {
               group={listGroupFilter || ""}
               setGroup={setListGroupFilter}
             />
+            {computingList ? (
+              <div className="text-sm text-muted-foreground">计算中...</div>
+            ) : null}
             {computedList.length === 0 && !computingList ? (
-              <div className="text-sm text-muted-foreground">点击“更新列表/计算”以计算当前售价下的渠道列表</div>
+              <div className="text-sm text-muted-foreground">当前售价下无可显示的承运商</div>
             ) : null}
             <CarrierList
               items={filteredComputedList}
