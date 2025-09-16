@@ -63,7 +63,7 @@ export default function MePage() {
       {/* Footnote */}
       <section className="mx-auto max-w-4xl">
         <p className="text-xs text-muted-foreground">
-          提示：本工具不收集你的输入与结果；如需部署私有实例或新增功能，请查看项目 README 或联系我们。
+          {/* 提示：本工具不收集你的输入与结果；如需部署私有实例或新增功能，请查看项目 README 或联系我们。 */}
         </p>
       </section>
     </div>
