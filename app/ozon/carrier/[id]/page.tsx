@@ -17,7 +17,7 @@ export default async function CarrierDetailPage(props: { params: Promise<{ id: s
     <div className="py-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{carrierName(id)} 详情</h1>
-        <Link className="text-sm text-blue-600 hover:underline" href={getCarrierDetailsUrl(id)} target="_blank">官方来源</Link>
+        <Link className="text-sm text-blue-600 hover:underline" href={getCarrierDetailsUrl(id)} target="_blank" rel="noreferrer noopener">官方来源</Link>
       </div>
 
       {!json ? (

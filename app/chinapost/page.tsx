@@ -1,18 +1,11 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Calculator, Search } from "lucide-react";
 import { type Service, type PricingInput, type ServiceWithComputed } from "@/types/shipping";
 import { fetchServices, computeForAll } from "@/lib/pricing";
 import ServiceRow from "@/components/service-row";
 
 export default function HomePage() {
-  // 默认将根路径重定向到 合作物流
-  const router = useRouter();
-  useEffect(() => {
-    // 使用 replace 避免产生历史记录
-    router.replace("/partner-logistics");
-  }, [router]);
   const [services, setServices] = useState<Service[]>([]);
   const [query, setQuery] = useState("");
 

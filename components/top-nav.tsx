@@ -4,8 +4,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const items = [
-  { href: "/", label: "邮政" },
-  { href: "/ozon", label: "Ozon" },
+  { href: "/partner-logistics", label: "合作物流" },
+  { href: "/chinapost", label: "邮政" },
   { href: "/me", label: "简介" },
 ];
 
@@ -22,7 +22,7 @@ export default function TopNav() {
               href={it.href}
               className={cn(
                 "rounded-md px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground",
-                pathname === it.href && "bg-accent text-accent-foreground"
+                ((it.href === "/partner-logistics" && (pathname === "/" || pathname.startsWith("/partner-logistics"))) || pathname === it.href) && "bg-accent text-accent-foreground"
               )}
             >
               {it.label}

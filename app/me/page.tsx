@@ -8,10 +8,10 @@ export default function MePage() {
           为跨境卖家与运营团队打造的轻量工具。用更少时间，做更准决策：快速得到更合理的 Ozon 售价与更合适的物流方案。
         </p>
         <div className="flex items-center justify-center gap-3 pt-2">
-          <a href="/ozon" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:opacity-90">
+          <a href="/partner-logistics" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:opacity-90">
             开始计算 Ozon 售价
           </a>
-          <a href="/" className="inline-flex items-center justify-center rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground">
+          <a href="/chinapost" className="inline-flex items-center justify-center rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground">
             计算中国邮政运费
           </a>
         </div>
@@ -51,10 +51,10 @@ export default function MePage() {
         <div className="text-lg font-medium">立即开始，用更少时间获得更可靠的定价与物流决策</div>
         <p className="mt-1 text-sm text-muted-foreground">减少反复试算与查表时间，降低错价与亏损风险。</p>
         <div className="mt-3 flex items-center justify-center gap-3">
-          <a href="/ozon" className="inline-flex items-center justify-center rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground shadow hover:opacity-90">
+          <a href="/partner-logistics" className="inline-flex items-center justify-center rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground shadow hover:opacity-90">
             打开 Ozon 售价计算器
           </a>
-          <a href="/" className="inline-flex items-center justify-center rounded-md border bg-background px-5 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground">
+          <a href="/chinapost" className="inline-flex items-center justify-center rounded-md border bg-background px-5 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground">
             打开中国邮政运费计算器
           </a>
         </div>

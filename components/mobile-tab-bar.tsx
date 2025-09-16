@@ -6,8 +6,8 @@ export default function MobileTabBar() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sm:hidden">
       <div className="mx-auto grid max-w-6xl grid-cols-3">
-        <Tab href="/" label="邮政" icon={<Mail className="h-5 w-5" />} />
-        <Tab href="/ozon" label="Ozon" icon={<Package className="h-5 w-5" />} />
+        <Tab href="/partner-logistics" label="合作物流" icon={<Package className="h-5 w-5" />} />
+        <Tab href="/chinapost" label="邮政" icon={<Mail className="h-5 w-5" />} />
         <Tab href="/me" label="简介" icon={<User className="h-5 w-5" />} />
       </div>
     </nav>
