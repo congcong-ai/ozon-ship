@@ -18,6 +18,14 @@ export type PriceChartSets = {
   xSegments?: { priceMin: number; priceMax: number; xMin: number; xMax: number; group: OzonGroup }[];
 };
 
+export type ExtraLine = {
+  points: Array<{ x: number; y: number; price?: number }>;
+  color: string;
+  dash?: string; // 如 "4 2"
+  label?: string;
+  interactive?: boolean; // 允许沿该折线拖动
+};
+
 // 识别“价格上升但利润下降”的连续区间
 // 返回各区间的索引范围及便捷信息
 function calcDescendingRanges(points: PriceChartPoint[]) {
@@ -84,6 +92,9 @@ export default function PriceChart({
   legendTitle,
   hideLegend = false,
   hideYAxisLabels = false,
+  extraLines,
+  activeGroup,
+  showDominated = true,
 }: {
   chart: PriceChartSets;
   sliderPrice: number | null;
@@ -95,6 +106,9 @@ export default function PriceChart({
   legendTitle?: string;
   hideLegend?: boolean;
   hideYAxisLabels?: boolean;
+  extraLines?: ExtraLine[];
+  activeGroup?: OzonGroup;
+  showDominated?: boolean;
 }) {
   const [hoverPoint, setHoverPoint] = useState<PriceChartPoint | null>(null);
   const dragRef = useRef<{ active: boolean }>({ active: false });
@@ -105,7 +119,7 @@ export default function PriceChart({
   const eps = 1e-6;
   // 左右留白：给左侧Y轴文字留空间，避免与折线冲突
   const padLeft = 56;
-  const padRight = 8;
+  const padRight = 24; // 加大右侧留白，给右端标签与推荐竖线留空间
   const innerW = vbW - padLeft - padRight;
   const scaleX = innerW / vbW;
 
@@ -231,8 +245,63 @@ export default function PriceChart({
           />
         ))}
 
+        {/* 叠加额外折线（如：销量、总利润，已做归一化到同一坐标） */}
+        {extraLines && extraLines.length > 0 && extraLines.map((ln, idx) => (
+          <g key={`extra-${idx}`}>
+            <path
+              d={`M ${ln.points.map((p) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" L ")}`}
+              fill="none"
+              stroke={ln.color}
+              strokeOpacity={0.95}
+              strokeWidth={2}
+              strokeDasharray={ln.dash}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ cursor: ln.interactive ? "pointer" : "default" }}
+              pointerEvents={ln.interactive ? "all" : "none"}
+              onMouseDown={ln.interactive ? (e) => {
+                const svg = (e.currentTarget as SVGPathElement).ownerSVGElement as SVGSVGElement;
+                if (!svg) return;
+                const rect = svg.getBoundingClientRect();
+                const xCss = e.clientX - rect.left;
+                const xSvg = (xCss / Math.max(1, rect.width)) * vbW;
+                const x = (xSvg - padLeft) / Math.max(1e-6, scaleX);
+                let bestI = 0, bestD = Number.POSITIVE_INFINITY;
+                for (let i = 0; i < ln.points.length; i++) {
+                  const d = Math.abs(ln.points[i].x - x);
+                  if (d < bestD) { bestD = d; bestI = i; }
+                }
+                const pt = ln.points[bestI];
+                dragRef.current.active = true;
+                if (typeof pt.price === 'number' && isFinite(pt.price)) {
+                  onDragToPrice(Math.round(pt.price * 100) / 100);
+                }
+              } : undefined}
+              onMouseMove={ln.interactive ? (e) => {
+                const svg = (e.currentTarget as SVGPathElement).ownerSVGElement as SVGSVGElement;
+                if (!svg) return;
+                const rect = svg.getBoundingClientRect();
+                const xCss = e.clientX - rect.left;
+                const xSvg = (xCss / Math.max(1, rect.width)) * vbW;
+                const x = (xSvg - padLeft) / Math.max(1e-6, scaleX);
+                let bestI = 0, bestD = Number.POSITIVE_INFINITY;
+                for (let i = 0; i < ln.points.length; i++) {
+                  const dx = ln.points[i].x - x;
+                  const d = Math.abs(dx);
+                  if (d < bestD) { bestD = d; bestI = i; }
+                }
+                const pt = ln.points[bestI];
+                if (dragRef.current.active && typeof pt.price === 'number' && isFinite(pt.price)) {
+                  onDragToPrice(Math.round(pt.price * 100) / 100);
+                }
+              } : undefined}
+            />
+            {/* 不再在折线末端渲染标签名称 */}
+          </g>
+        ))}
+
         {/* 价格更高但利润反而更低：用沿折线的浅色背景带标出整个区间（无竖线） */}
-        {(() => {
+        {showDominated && (() => {
           const regions = calcDominatedRegions(allPoints);
           if (!regions.length) return null;
           return regions.map((r: { startIndex: number; endIndex: number }, idx: number) => {
@@ -304,10 +373,14 @@ export default function PriceChart({
                     </text>
                   </g>
                 )}
+
+        {/* 去掉 π 最大推荐价竖线（根据需求不再显示） */}
               </g>
             );
           });
         })()}
+
+        {/* 不再渲染“单件利润率（各组）”右端标签 */}
 
         {/* 当前价竖线（压缩坐标） */}
         {sliderPrice !== null && isFinite(sliderPrice) && (
@@ -336,13 +409,7 @@ export default function PriceChart({
           })()
         )}
 
-        {/* 悬浮点与提示 */}
-        {hoverPoint && (
-          <g>
-            <circle cx={hoverPoint.x} cy={hoverPoint.y} r={3} fill="#ef4444" />
-            <line x1={hoverPoint.x} y1={0} x2={hoverPoint.x} y2={vbH} stroke="#94a3b8" strokeDasharray="3 3" />
-          </g>
-        )}
+        {/* 移除悬浮红点与跟随竖线渲染（保留交互不渲染视觉元素） */}
       </g>
       {/* 将Y轴文字放在最后，确保位于最上层 */}
       {!hideYAxisLabels && (

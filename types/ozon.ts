@@ -46,6 +46,13 @@ export type OzonRateTable = {
   battery_allowed?: boolean;
 };
 
+// 销量模型定义（首版仅实现常数弹性）
+export type DemandModel =
+  | { type: "none" }
+  | { type: "constant_elasticity"; epsilon: number; pref_price?: number }
+  | { type: "logistic"; qmax: number; p10: number; p90: number }
+  | { type: "table"; points: Array<{ price: number; qty: number }> };
+
 export type OzonPricingParams = {
   // 商品
   weight_g: number;
@@ -74,6 +81,9 @@ export type OzonPricingParams = {
   carrier?: CarrierId;
   tier?: string;
   delivery?: DeliveryMode;
+  //（新增）销量模型与周期口径
+  demand?: DemandModel; // 默认未启用
+  period?: "day" | "week"; // 默认 day
 };
 
 export type OzonCalcBreakdown = {

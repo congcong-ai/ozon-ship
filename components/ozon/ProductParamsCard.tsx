@@ -135,7 +135,7 @@ export default function ProductParamsCard({
             </div>
           </div>
         </div>
-        <p className="mt-1 text-[11px] text-muted-foreground">用于平台体积计费（任一边 ≥ 40cm）。</p>
+        {/* <p className="mt-1 text-[11px] text-muted-foreground">用于平台体积计费（任一边 ≥ 40cm）。</p> */}
         {/* 实时提示：本组限制 + 体积重预览 */}
         <div className="mt-2 rounded-md border bg-accent/20 text-[12px] px-2 py-2">
           <div className="flex flex-wrap items-center gap-2">

@@ -3,7 +3,7 @@
 import * as React from "react";
 import FxToolbar from "@/components/ozon/FxToolbar";
 import PriceControlsBar from "@/components/ozon/PriceControlsBar";
-import PriceChart, { type PriceChartSets, calcDominatedRegions } from "@/components/ozon/price-chart";
+import PriceChart, { type PriceChartSets, calcDominatedRegions, type ExtraLine } from "@/components/ozon/price-chart";
 import ChartLegend from "@/components/ozon/ChartLegend";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
@@ -24,6 +24,22 @@ export default function PriceChartCard({
   minMargin,
   maxMargin,
   fxToolbar,
+  demandModel = 'none',
+  setDemandModel,
+  extraLines,
+  legendExtras,
+  demandStats,
+  recommendPrice,
+  ceEpsilon,
+  setCeEpsilon,
+  cePrefP0,
+  setCePrefP0,
+  recommendPriceCE,
+  recommendPriceLOG,
+  logisticP10,
+  setLogisticP10,
+  logisticP90,
+  setLogisticP90,
   onOpenSettings,
 }: {
   title?: string;
@@ -55,6 +71,22 @@ export default function PriceChartCard({
     fxSource: string | null;
     fxUpdatedAt: string | null;
   };
+  demandModel?: 'none' | 'ce' | 'logistic';
+  setDemandModel?: (m: 'none' | 'ce' | 'logistic') => void;
+  extraLines?: ExtraLine[];
+  legendExtras?: Array<{ label: string; color: string; dash?: string }>;
+  demandStats?: { q_norm: number; pi_norm_cny: number } | null;
+  recommendPrice?: number | null;
+  ceEpsilon?: number;
+  setCeEpsilon?: (v: number) => void;
+  cePrefP0?: number | null;
+  setCePrefP0?: (v: number | null) => void;
+  recommendPriceCE?: number | null;
+  recommendPriceLOG?: number | null;
+  logisticP10?: number | null;
+  setLogisticP10?: (v: number | null) => void;
+  logisticP90?: number | null;
+  setLogisticP90?: (v: number | null) => void;
   onOpenSettings: () => void;
 }) {
   const yMin = typeof minMargin === 'number' ? minMargin : 0.1;
@@ -89,7 +121,9 @@ export default function PriceChartCard({
     <section className="rounded-lg border p-4 space-y-4 sm:space-y-3">
       {/* 头部在小屏改为纵向堆叠，避免标题被压缩成竖排；大屏保持左右分布 */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="font-medium flex-shrink-0">{title}</h2>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <h2 className="font-medium">{title}</h2>
+        </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
           <FxToolbar {...fxToolbar} />
           <Button size="sm" variant="default" onClick={onOpenSettings}>
@@ -111,10 +145,37 @@ export default function PriceChartCard({
           activeGroup={activeGroup}
           danger={danger}
           dangerMessage={dangerMessage}
+          demandModel={demandModel}
+          setDemandModel={setDemandModel}
+          ceEpsilon={ceEpsilon}
+          setCeEpsilon={setCeEpsilon}
+          cePrefP0={cePrefP0}
+          setCePrefP0={setCePrefP0}
+          recommendPriceCE={recommendPriceCE}
+          recommendPriceLOG={recommendPriceLOG}
+          logisticP10={logisticP10}
+          setLogisticP10={setLogisticP10}
+          logisticP90={logisticP90}
+          setLogisticP90={setLogisticP90}
+          demandStats={demandStats ?? null}
         />
         {/* 图表上方外置图例（不与曲线重叠） */}
-        <div className="flex justify-end">
-          <ChartLegend chart={chart} title="Ozon货件分组" />
+        <div className="flex justify-end gap-3">
+          {/* 左：货件分组 */}
+          <ChartLegend chart={chart} title="Ozon货件分组" showGroups extras={undefined} />
+          {/* 右：销售情况（仅显示 extras）*/}
+          <ChartLegend
+            chart={chart}
+            title="销售情况"
+            showGroups={false}
+            extras={[
+              { label: "单件利润率（各组）", color: "#334155" },
+              ...(extraLines ? [
+                { label: "销量（相对）", color: "#111827", dash: "4 2" },
+                { label: "总利润（相对）", color: "#ef4444", dash: "6 3" },
+              ] : [])
+            ]}
+          />
         </div>
         <div className="relative select-none rounded-md border bg-white overflow-hidden">
           <PriceChart
@@ -123,6 +184,9 @@ export default function PriceChartCard({
             minMargin={typeof minMargin === 'number' ? minMargin : 0.1}
             maxMargin={typeof maxMargin === 'number' && maxMargin > 0 ? maxMargin : undefined}
             onDragToPrice={(p)=> onChangeSliderPrice(Math.round(p*100)/100)}
+            extraLines={extraLines}
+            activeGroup={activeGroup}
+            showDominated={demandModel === 'none'}
             hideLegend
           />
         </div>
