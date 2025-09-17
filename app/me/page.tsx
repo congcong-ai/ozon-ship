@@ -45,6 +45,14 @@ export default function MePage() {
           <div className="text-sm font-medium">ⓘ 数据来源透明</div>
           <p className="mt-1 text-sm text-muted-foreground">规则与数据与官方文档保持一致，来源与更新时间可在页面内查看。</p>
         </div>
+        <div className="rounded-lg border bg-white/70 p-4">
+          <div className="text-sm font-medium">📏 实时尺寸限制与体积重预览</div>
+          <p className="mt-1 text-sm text-muted-foreground">在尺寸输入框下方实时显示当前货件组的尺寸限制（三边和/最长边）与体积重预估；Big / Premium Big 组按“物理重量与体积重取大者”计费。</p>
+        </div>
+        <div className="rounded-lg border bg-white/70 p-4">
+          <div className="text-sm font-medium">🚦 超限提示与一键切换</div>
+          <p className="mt-1 text-sm text-muted-foreground">若尺寸超过当前组限制，会弹窗提示并提供“一键切换至中国邮政计算”的入口，确保你快速继续完成运费测算。</p>
+        </div>
       </section>
 
       {/* CTA */}
@@ -63,9 +71,7 @@ export default function MePage() {
 
       {/* Footnote */}
       <section className="mx-auto max-w-4xl">
-        <p className="text-xs text-muted-foreground">
-          {/* 提示：本工具不收集你的输入与结果；如需部署私有实例或新增功能，请查看项目 README 或联系我们。 */}
-        </p>
+        <p className="text-xs text-muted-foreground">规则配置已抽离至 <code>config/ozon_groups.ts</code>，便于按需调整货件组的尺寸与计费规则。</p>
       </section>
     </div>
   );
