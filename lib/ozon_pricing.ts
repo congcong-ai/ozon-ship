@@ -1,16 +1,10 @@
 import { OzonGroup, OzonGroupRule, OzonRateTable, OzonPricingParams, ResultItem, OzonCalcBreakdown } from "@/types/ozon";
+import { OZON_GROUP_RULES as OZON_GROUP_RULES_CONFIG } from "@/config/ozon_groups";
 
 // ------------------------------
-// 1) Ozon 六组规则（固定常量）
+// 1) Ozon 六组规则（来自配置）
 // ------------------------------
-export const OZON_GROUP_RULES: OzonGroupRule[] = [
-  { group: "Extra Small",   priceRub: { min: 1,    max: 1500 },   weightG: { min: 1,    max: 500 } },
-  { group: "Budget",        priceRub: { min: 1,    max: 1500 },   weightG: { min: 501,  max: 30000 } },
-  { group: "Small",         priceRub: { min: 1501, max: 7000 },   weightG: { min: 1,    max: 2000 } },
-  { group: "Big",           priceRub: { min: 1501, max: 7000 },   weightG: { min: 2001, max: 30000 } },
-  { group: "Premium Small", priceRub: { min: 7001, max: 250000 }, weightG: { min: 1,    max: 5000 } },
-  { group: "Premium Big",   priceRub: { min: 7001, max: 250000 }, weightG: { min: 5001, max: 30000 } },
-];
+export const OZON_GROUP_RULES: OzonGroupRule[] = OZON_GROUP_RULES_CONFIG;
 
 // ------------------------------
 // 2) 工具函数
@@ -68,7 +62,20 @@ export function computeProfitForPrice(
   const commission_rub = P * α;
   const acquiring_rub = P * β;
   const last_mile_rub = lastMileFeeRub(P, params.last_mile);
-  const intl_rub = intlLogisticsRub(rate, params.weight_g, R);
+
+  // 依据组别的计费方式选择用于国际段计费的重量（克）
+  let bill_weight_g = params.weight_g;
+  const rule = OZON_GROUP_RULES.find((r) => r.group === group);
+  if (rule && rule.billing === "max_of_physical_and_dimensional") {
+    const l = Math.max(0, params.dims_cm?.l || 0);
+    const w = Math.max(0, params.dims_cm?.w || 0);
+    const h = Math.max(0, params.dims_cm?.h || 0);
+    const divisor = rule.dimsLimit?.volumetric_divisor || 12000;
+    // 体积重（kg）= L*W*H / divisor；转为克
+    const dim_weight_g = Math.max(0, (l * w * h) / Math.max(1e-9, divisor) * 1000);
+    bill_weight_g = Math.max(params.weight_g, dim_weight_g);
+  }
+  const intl_rub = intlLogisticsRub(rate, bill_weight_g, R);
 
   let fx_fee_rub: number;
   let receipt_rub: number;
@@ -115,7 +122,7 @@ export function priceRangeForMargin(
 
   // 如果设置了利润率上下限，使用解析解求端点
   if (Number.isFinite(floor)) {
-    const solsLo = solvePriceForTargetMargin(params, rate, floor as number);
+    const solsLo = solvePriceForTargetMargin(params, rate, floor as number, group);
     if (solsLo.length) lo = Math.min(...solsLo);
     else {
       // 二分数值回退：单调函数 m(P) 求解 m= floor
@@ -141,7 +148,7 @@ export function priceRangeForMargin(
     }
   }
   if (typeof cap === "number") {
-    const solsHi = solvePriceForTargetMargin(params, rate, cap);
+    const solsHi = solvePriceForTargetMargin(params, rate, cap, group);
     if (solsHi.length) hi = Math.max(...solsHi);
     else {
       const f = (P: number) => computeProfitForPrice(P, group, rate, params).margin - cap;
@@ -186,7 +193,8 @@ export function priceRangeForMargin(
 function solvePriceForTargetMargin(
   params: OzonPricingParams,
   rate: { base_cny: number; per_gram_cny: number },
-  targetMargin: number
+  targetMargin: number,
+  group: OzonGroup
 ): number[] {
   const α = params.commission;
   const β = params.acquiring;
@@ -198,7 +206,18 @@ function solvePriceForTargetMargin(
 
   const s = 1 - α - β;
   const t = 1 - γ;
-  const I = intlLogisticsRub(rate, params.weight_g, R);
+  // 依据组别确定用于国际段计费的重量
+  let bill_weight_g = params.weight_g;
+  const rule4 = OZON_GROUP_RULES.find(r => r.group === group);
+  if (rule4 && rule4.billing === "max_of_physical_and_dimensional") {
+    const l = Math.max(0, params.dims_cm?.l || 0);
+    const w = Math.max(0, params.dims_cm?.w || 0);
+    const h = Math.max(0, params.dims_cm?.h || 0);
+    const divisor = rule4.dimsLimit?.volumetric_divisor || 12000;
+    const dim_weight_g = Math.max(0, (l * w * h) / Math.max(1e-9, divisor) * 1000);
+    bill_weight_g = Math.max(params.weight_g, dim_weight_g);
+  }
+  const I = intlLogisticsRub(rate, bill_weight_g, R);
   const C = params.cost_cny;
   const m = targetMargin;
   const out: number[] = [];
@@ -356,7 +375,7 @@ export function bestPricing(
       if (targets.length) {
         const sols: number[] = [];
         for (const tMargin of targets) {
-          const vs = solvePriceForTargetMargin(params, rate.pricing, tMargin);
+          const vs = solvePriceForTargetMargin(params, rate.pricing, tMargin, rule.group);
           sols.push(...vs);
         }
         const base = integerizeCandidates(sols);

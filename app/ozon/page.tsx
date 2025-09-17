@@ -9,6 +9,7 @@ import { loadAllCarrierRatesCached, loadCarrierRatesCachedStrict } from "@/lib/r
 import { computeListViaWorker } from "@/lib/worker_client";
 import { useOzonChart } from "@/hooks/useOzonChart";
 import dynamic from "next/dynamic";
+import DimsLimitDialog from "@/components/ozon/DimsLimitDialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { carrierName } from "@/lib/carrier_names";
@@ -92,6 +93,18 @@ export default function OzonPage() {
   // 方案详情弹框
   const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
   const [detailsItem, setDetailsItem] = useState<ResultItem | null>(null);
+  // 尺寸限制提示弹窗
+  const [dimsOpen, setDimsOpen] = useState<boolean>(false);
+  const [dimsInfo, setDimsInfo] = useState<{
+    group: OzonGroup;
+    rule: (typeof OZON_GROUP_RULES)[number];
+    dims: { l: number; w: number; h: number };
+    sum: number;
+    longest: number;
+    price: number;
+    weightG: number;
+  } | null>(null);
+  const lastDimsKeyRef = useRef<string | null>(null);
 
   // 汇率（RUB/CNY）
   const [rubPerCny, setRubPerCny] = useState<number>(11.830961);
@@ -455,6 +468,11 @@ export default function OzonPage() {
     return activeRates[0] || null;
   }, [activeRates, best]);
 
+  // 用于“商品参数卡片”的实时限制提示：采用当前滑块推断的组
+  const activeRuleAtSlider = useMemo(() => {
+    return OZON_GROUP_RULES.find(r => r.group === groupAtSliderPrice) || null;
+  }, [groupAtSliderPrice]);
+
   // 方案B：针对当前滑块售价与组，动态选取“该组内利润率最高”的费率（三元组）
   const rateAtSliderPrice = useMemo(() => {
     if (sliderPrice === null) return null;
@@ -578,6 +596,23 @@ export default function OzonPage() {
     return computeProfitForPrice(sliderPrice, groupAtSliderPrice, rateAtSliderPrice.pricing, params);
   }, [sliderPrice, rateAtSliderPrice?.carrier, rateAtSliderPrice?.tier, rateAtSliderPrice?.delivery, groupAtSliderPrice, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl]);
 
+  // 尺寸超限检测：当“售价+重量”确定组后，若当前尺寸超过该组限制，则弹窗提示
+  useEffect(() => {
+    if (sliderPrice === null) return;
+    const rule = OZON_GROUP_RULES.find(r => r.group === groupAtSliderPrice);
+    if (!rule || !rule.dimsLimit) return;
+    const { l, w, h } = dims;
+    const sum = (isFinite(l)?l:0) + (isFinite(w)?w:0) + (isFinite(h)?h:0);
+    const longest = Math.max(isFinite(l)?l:0, isFinite(w)?w:0, isFinite(h)?h:0);
+    const over = sum > rule.dimsLimit.sum_cm_max + 1e-9 || longest > rule.dimsLimit.longest_cm_max + 1e-9;
+    const key = `${groupAtSliderPrice}|${rule.dimsLimit.sum_cm_max}|${rule.dimsLimit.longest_cm_max}|${l}|${w}|${h}`;
+    if (over && lastDimsKeyRef.current !== key) {
+      setDimsInfo({ group: groupAtSliderPrice, rule, dims: { l, w, h }, sum: Math.round(sum*100)/100, longest: Math.round(longest*100)/100, price: sliderPrice, weightG });
+      setDimsOpen(true);
+      lastDimsKeyRef.current = key;
+    }
+  }, [sliderPrice, groupAtSliderPrice, dims.l, dims.w, dims.h, weightG]);
+
   // 当前滑块对应的“即时详情”（不需要点击应用）
   const currentItem = useMemo(() => {
     if (sliderPrice === null || !rateAtSliderPrice || !groupAtSliderPrice) return null;
@@ -697,6 +732,8 @@ export default function OzonPage() {
             setWeightG={setWeightG}
             dims={dims}
             setDims={setDims}
+            activeGroup={groupAtSliderPrice}
+            activeRule={activeRuleAtSlider}
           />
         </div>
         <div className="col-span-1">
@@ -854,6 +891,8 @@ export default function OzonPage() {
 
       {/* 方案详情弹框 */}
       <DetailsDialog open={detailsOpen} onOpenChange={(v)=>{ setDetailsOpen(v); if(!v) setDetailsItem(null); }} item={detailsItem} />
+      {/* 尺寸限制提示弹窗 */}
+      <DimsLimitDialog open={dimsOpen} onOpenChange={setDimsOpen} info={dimsInfo} />
     </div>
   );
 }

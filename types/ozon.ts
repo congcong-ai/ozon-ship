@@ -6,10 +6,25 @@ export type OzonGroup =
   | "Premium Small"
   | "Premium Big";
 
+export type BillingMode = "physical" | "max_of_physical_and_dimensional";
+
+export type DimsLimit = {
+  // 三边之和 ≤ sum_cm_max，最长边 ≤ longest_cm_max
+  sum_cm_max: number;
+  longest_cm_max: number;
+  // 是否允许超尺（默认不允许）；目前业务为一律不允许
+  allow_oversize?: boolean;
+  // 体积重计算分母（cm），如 12000；当 billing 为“取大者”时生效
+  volumetric_divisor?: number;
+};
+
 export type OzonGroupRule = {
   group: OzonGroup;
   priceRub: { min: number; max: number };
   weightG: { min: number; max: number };
+  // 新增：尺寸限制与计费方式
+  dimsLimit?: DimsLimit;
+  billing?: BillingMode;
 };
 
 export type CarrierId = "ural" | string;

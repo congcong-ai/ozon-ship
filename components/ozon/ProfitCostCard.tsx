@@ -68,7 +68,7 @@ export default function ProfitCostCard({
               }}
               onBlur={() => setMaxInput(null)}
             />
-            <div className="text-xs text-muted-foreground">%（0 = 禁用）</div>
+            <div className="text-xs text-muted-foreground">%</div>
           </div>
           <div className="grid grid-cols-3 gap-2 items-center">
             <div className="text-sm text-muted-foreground">进货价</div>

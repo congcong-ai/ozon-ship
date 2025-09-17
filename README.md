@@ -2,6 +2,10 @@
 
 基于 Next.js 14 + Tailwind CSS + shadcn 风格组件的网页应用。支持输入重量/尺寸/属性并计算中国邮政到俄罗斯多渠道价格，同时提供 Ozon 平台的“最优售价/利润区间”参考，帮助跨境卖家更快做出定价与物流决策。PC 自适应，H5 显示底部 Tab Bar。
 
+## 物流价格
+https://docs.ozon.ru/global/zh-hans/fulfillment/rfbs/logistic-settings/partner-delivery-ozon/new-archive/?country=CN
+此处有更新情况。
+
 ## 产品简介
 Ozon Ship 是一个轻量、开箱即用的“定价 + 物流”计算助手：
 - Ozon 最优售价计算：基于商品规格与费率参数生成利润率曲线，拖动售价滑块即可查看利润拆解与推荐物流搭配。
