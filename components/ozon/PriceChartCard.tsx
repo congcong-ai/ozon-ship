@@ -1,8 +1,9 @@
 "use client";
 
+import * as React from "react";
 import FxToolbar from "@/components/ozon/FxToolbar";
 import PriceControlsBar from "@/components/ozon/PriceControlsBar";
-import PriceChart, { type PriceChartSets } from "@/components/ozon/price-chart";
+import PriceChart, { type PriceChartSets, calcDominatedRegions } from "@/components/ozon/price-chart";
 import ChartLegend from "@/components/ozon/ChartLegend";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
@@ -59,6 +60,31 @@ export default function PriceChartCard({
   const yMin = typeof minMargin === 'number' ? minMargin : 0.1;
   const yMax = typeof maxMargin === 'number' && maxMargin > 0 ? maxMargin : yMin + 1;
   const yMid = (yMin + yMax) / 2;
+  // 基于与图表相同的算法计算“提高价格利润下降”的红色区间
+  const allPoints = React.useMemo(() => chart.sets.flatMap((s) => s.points), [chart.sets]);
+  const dominatedRegions = React.useMemo(() => calcDominatedRegions(allPoints), [allPoints]);
+  const activeRegion = React.useMemo(() => {
+    if (sliderPrice === null || !isFinite(sliderPrice)) return null;
+    for (const r of dominatedRegions) {
+      const pts = allPoints.slice(r.startIndex, r.endIndex + 1);
+      if (!pts.length) continue;
+      const pL = pts[0].price;
+      const pR = pts[pts.length - 1].price;
+      const minP = Math.min(pL, pR);
+      const maxP = Math.max(pL, pR);
+      if (sliderPrice >= minP - 1e-6 && sliderPrice <= maxP + 1e-6) {
+        return { pL, pR };
+      }
+    }
+    return null;
+  }, [dominatedRegions, sliderPrice, allPoints]);
+  const danger = !!activeRegion;
+  const dangerMessage = React.useMemo(() => {
+    if (!activeRegion) return null;
+    const pL = Math.min(activeRegion.pL, activeRegion.pR).toFixed(2);
+    const pR = Math.max(activeRegion.pL, activeRegion.pR).toFixed(2);
+    return `此区域提高价格 利润反而降低：₽ ${pL} - ₽ ${pR}`;
+  }, [activeRegion]);
   return (
     <section className="rounded-lg border p-4 space-y-4 sm:space-y-3">
       {/* 头部在小屏改为纵向堆叠，避免标题被压缩成竖排；大屏保持左右分布 */}
@@ -83,6 +109,8 @@ export default function PriceChartCard({
           chartTriple={chartTriple}
           rubPerCny={rubPerCny}
           activeGroup={activeGroup}
+          danger={danger}
+          dangerMessage={dangerMessage}
         />
         {/* 图表上方外置图例（不与曲线重叠） */}
         <div className="flex justify-end">

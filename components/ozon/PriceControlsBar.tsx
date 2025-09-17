@@ -15,6 +15,8 @@ export default function PriceControlsBar({
   chartTriple,
   rubPerCny,
   activeGroup,
+  danger = false,
+  dangerMessage = null,
 }: {
   sliderRange: { min: number; max: number };
   sliderPrice: number | null;
@@ -29,6 +31,8 @@ export default function PriceControlsBar({
   chartTriple: { carrier: string; tier: string; delivery: DeliveryMode };
   rubPerCny: number;
   activeGroup: string;
+  danger?: boolean;
+  dangerMessage?: string | null;
 }) {
   function deliveryZh(d: DeliveryMode) {
     if (d === "door") return "上门配送";
@@ -37,14 +41,15 @@ export default function PriceControlsBar({
   }
   return (
     <div>
-      {/* 突出显示的滑块区：浅色背景 + 较大内外边距 */}
-      <div className="rounded-md bg-muted/40 px-3 sm:px-4 py-5 sm:py-6 my-5">
+      {/* 突出显示的滑块区：浅色强调底 + 边框 + 阴影 + 更大留白 */}
+      <div className="rounded-lg border border-accent/40 bg-accent/20 shadow-sm px-4 sm:px-6 py-7 sm:py-8 my-6">
         <div className="flex items-end justify-between text-xs text-muted-foreground mb-3">
           <span>₽ {sliderRange.min}</span>
           <span>₽ {sliderRange.max}</span>
         </div>
         <div>
           <Slider
+            variant={danger ? 'danger' : 'default'}
             value={[sliderPrice ?? sliderRange.min]}
             min={sliderRange.min}
             max={sliderRange.max}
@@ -58,9 +63,9 @@ export default function PriceControlsBar({
       </div>
       <div className="mt-4 sm:mt-5 flex flex-wrap items-center gap-3 text-sm">
         <div className="inline-flex items-center gap-2">
-          <span>售价：</span>
+          <span className={danger ? "text-red-600" : undefined}>售价：</span>
           <Input
-            className="h-8 w-28"
+            className={"h-8 w-28 " + (danger ? "border-red-500 text-red-600 focus-visible:ring-red-500" : "")}
             type="number"
             step="0.01"
             value={priceInput ?? (typeof sliderPrice==='number' ? sliderPrice.toFixed(2) : "")}
@@ -97,6 +102,11 @@ export default function PriceControlsBar({
             </div>
           )}
         </div>
+        {dangerMessage && (
+          <div className="w-full text-xs sm:text-sm text-red-700 mt-1">
+            {dangerMessage}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -47,7 +47,7 @@ function calcDescendingRanges(points: PriceChartPoint[]) {
 // 识别“价格更高但利润反而低”的区间（基于历史最高利润的回撤）
 // 当利润低于已出现的历史最高利润 lastMaxMargin（容差 tol）时开始；
 // 当利润重新回到 >= lastMaxMargin - tol 时闭合区间。
-function calcDominatedRegions(points: PriceChartPoint[]) {
+export function calcDominatedRegions(points: PriceChartPoint[]) {
   const regions: { startIndex: number; endIndex: number }[] = [];
   if (!points || points.length < 2) return regions;
   const tol = 1e-3; // 0.1% 容差，避免抖动
