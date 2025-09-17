@@ -22,12 +22,12 @@ export default function MePage() {
       {/* Features */}
       <section className="mx-auto max-w-6xl grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="rounded-lg border bg-white/70 p-4">
-          <div className="text-sm font-medium">⚡ Ozon 最优售价</div>
-          <p className="mt-1 text-sm text-muted-foreground">输入重量、尺寸、成本与费率，拖动售价滑块，自动给出利润区间与物流搭配建议。</p>
+          <div className="text-sm font-medium">⚡ 最优售价与物流搭配</div>
+          <p className="mt-1 text-sm text-muted-foreground">输入重量、尺寸、成本与费率，拖动售价滑块，实时看到利润拆解；并给出更合理的物流搭配建议（“查看更多”自动计算承运商列表）。</p>
         </div>
         <div className="rounded-lg border bg-white/70 p-4">
-          <div className="text-sm font-medium">📦 物流方案对比</div>
-          <p className="mt-1 text-sm text-muted-foreground">展开“查看更多”后自动计算承运商列表；当价格滑杆/曲线变动时，已展开列表会自动收起，确保信息始终与售价一致。</p>
+          <div className="text-sm font-medium">📈 销量模型与总利润曲线</div>
+          <p className="mt-1 text-sm text-muted-foreground">可启用“销量模型（常数弹性）”，在图表叠加销量与总利润（归一化）两条曲线；勾选状态会持久化到浏览器。</p>
         </div>
         <div className="rounded-lg border bg-white/70 p-4">
           <div className="text-sm font-medium">💱 汇率管理（手动/自动）</div>
@@ -38,20 +38,12 @@ export default function MePage() {
           <p className="mt-1 text-sm text-muted-foreground">按重量/体积重与渠道规则自动计算到俄罗斯多渠道价格，支持搜索与排序。</p>
         </div>
         <div className="rounded-lg border bg-white/70 p-4">
-          <div className="text-sm font-medium">📱 自适应与简洁体验</div>
-          <p className="mt-1 text-sm text-muted-foreground">桌面端顶部导航、移动端底部 Tab Bar，自适应布局，聚焦核心操作。</p>
+          <div className="text-sm font-medium">📏 尺寸限制预览与超限提示</div>
+          <p className="mt-1 text-sm text-muted-foreground">输入尺寸时实时显示当前货件组的限制（三边和/最长边）与体积重预估；若超限会弹窗提示并提供“一键切换至中国邮政”继续计算。</p>
         </div>
         <div className="rounded-lg border bg-white/70 p-4">
           <div className="text-sm font-medium">ⓘ 数据来源透明</div>
           <p className="mt-1 text-sm text-muted-foreground">规则与数据与官方文档保持一致，来源与更新时间可在页面内查看。</p>
-        </div>
-        <div className="rounded-lg border bg-white/70 p-4">
-          <div className="text-sm font-medium">📏 实时尺寸限制与体积重预览</div>
-          <p className="mt-1 text-sm text-muted-foreground">在尺寸输入框下方实时显示当前货件组的尺寸限制（三边和/最长边）与体积重预估；Big / Premium Big 组按“物理重量与体积重取大者”计费。</p>
-        </div>
-        <div className="rounded-lg border bg-white/70 p-4">
-          <div className="text-sm font-medium">🚦 超限提示与一键切换</div>
-          <p className="mt-1 text-sm text-muted-foreground">若尺寸超过当前组限制，会弹窗提示并提供“一键切换至中国邮政计算”的入口，确保你快速继续完成运费测算。</p>
         </div>
       </section>
 

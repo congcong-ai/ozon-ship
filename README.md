@@ -10,6 +10,7 @@ https://docs.ozon.ru/global/zh-hans/fulfillment/rfbs/logistic-settings/partner-d
 Ozon Ship 是一个轻量、开箱即用的“定价 + 物流”计算助手：
 - Ozon 最优售价计算：基于商品规格与费率参数生成利润率曲线，拖动售价滑块即可查看利润拆解与推荐物流搭配。
 - 中国邮政到俄罗斯运费计算：按重量/体积重与渠道规则计算多渠道价格，支持搜索与排序。
+- 销量模型与总利润曲线：可启用“常数弹性”销量模型，在图表叠加销量与总利润（归一化）两条曲线；开关状态持久化到浏览器。
 
 ## 为什么值得用
 - 更快更准：减少反复试算与查表，实时看到利润拆解与可行区间。
@@ -32,6 +33,11 @@ Ozon Ship 是一个轻量、开箱即用的“定价 + 物流”计算助手：
 - 结果可搜索、排序，支持勾选多条进行比较。
 - 自适应：桌面端网格布局；手机端自动显示底部 Tab Bar。
 
+### 交互细节
+- “查看更多”交互：点击后自动计算并显示承运商列表；若上方滑块或曲线导致售价变化，已展开列表会自动收起回到“查看更多”（确保结果与售价一致）。
+- 销量模型开关：位于“售价滑块与利润率曲线”标题旁；启用后叠加销量与总利润曲线，开关状态写入 `localStorage`。
+- 汇率（RUB/CNY）：页面顶部显示；支持手动输入并在刷新后记忆。设置为手动模式时不自动刷新，所有计算始终使用当前显示汇率。
+
 ## 快速开始
 1. 安装依赖（Node ≥ 18）
    ```bash
@@ -50,15 +56,18 @@ Ozon Ship 是一个轻量、开箱即用的“定价 + 物流”计算助手：
 
 ## 目录结构
 - `app/`：Next.js App Router（`/partner-logistics/page.tsx` 合作物流、`/chinapost/page.tsx` 中国邮政、`/me/page.tsx` 简介；`api/services` 读取数据）。
-- `components/`：UI 组件（含移动端 Tab Bar、服务卡片、按钮）。
-- `lib/`：工具与计费逻辑（`ozon_pricing.ts` 等）。
+- `components/`：UI 组件（含移动端 Tab Bar、服务卡片、按钮、对话框、图表控件）。
+- `lib/`：工具与计费逻辑（`ozon_pricing.ts`、`ozon_details.ts` 等）。
+- `hooks/`：自定义 Hook（如 `useOzonChart.ts`）。
+- `workers/`：Web Worker（例如 `pricing.worker.ts`）。
 - `config/`：业务配置（如 `ozon_groups.ts` 存放 Ozon 货件组的尺寸与计费规则）。
 - `types/`：TypeScript 类型定义。
-- `data/`：数据源（`chinapost_russia.json`）。
+- `data/`：数据源（`chinapost_russia.json`、各 Ozon 费率 JSON）。
 - `docs/`：文档与数据字段说明。
 
 ## 环境变量（为后续数据库预留）
 - 复制 `.env.example` 为 `.env` 并设置 `DATABASE_URL`（PostgreSQL）。当前版本暂未使用数据库，后续版本用于存储搜索历史与用户信息。
+- 可选：`NEXT_PUBLIC_SHOW_GLOBAL_NOTICE` 设置为 `1/true/on` 时，启用全站顶部提示（默认关闭，不渲染）。
 
 ## 计费与限制说明（与数据一致）
 - e特快：若任一边≥40cm，计费重量取体积重与实际重较大者；体积重公式为 `长×宽×高(cm)/6000`，单位 kg。
@@ -71,6 +80,14 @@ Ozon Ship 是一个轻量、开箱即用的“定价 + 物流”计算助手：
   - Big / Premium Big 组为 `max_of_physical_and_dimensional`（取大者），默认体积重分母为 12000；
   - 其余组为 `physical`（仅按物理重量）。
 - 页面会实时显示“本组限制 + 体积重预览”，并在超限时弹窗提示，支持一键跳转至 `/chinapost` 继续计算。
+
+具体分组（尺寸为上限，均为 cm）：
+- Extra Small：三边和 ≤ 90，最长边 ≤ 60；计费按物理重量。
+- Budget：三边和 ≤ 150，最长边 ≤ 60；计费按物理重量。
+- Small：三边和 ≤ 150，最长边 ≤ 60；计费按物理重量。
+- Big：三边和 ≤ 250，最长边 ≤ 150；计费按“物理重量与体积重取大者”（体积重=长×宽×高÷12000）。
+- Premium Small：三边和 ≤ 250，最长边 ≤ 150；计费按物理重量。
+- Premium Big：三边和 ≤ 310，最长边 ≤ 150；计费按“物理重量与体积重取大者”（体积重=长×宽×高÷12000）。
 
 ## 如何修改渠道与价格数据
 请阅读 `docs/chinapost_data_schema.md`，其中包含字段解释、示例、校验与常见错误排查。

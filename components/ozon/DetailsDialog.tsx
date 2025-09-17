@@ -35,7 +35,7 @@ export default function DetailsDialog({
         {item ? (
           <div className="text-sm space-y-2">
             <div className="font-medium">{carrierName(String(item.carrier))} / {item.tier} / {item.delivery === 'door' ? '上门配送' : '取货点'} · 组 {item.group}</div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            <div className="grid grid-cols-[3fr_7fr] gap-x-4 gap-y-1">
               <span>售价：</span>
               <span>₽ {item.price_rub.toFixed(2)} / ¥ {rubPerCny ? (item.price_rub / rubPerCny).toFixed(2) : '-'}</span>
 

@@ -140,7 +140,7 @@ export default function ProductParamsCard({
         </div>
         {/* <p className="mt-1 text-[11px] text-muted-foreground">用于平台体积计费（任一边 ≥ 40cm）。</p> */}
         {/* 当前货件组的价格/重量限制 */}
-        {activeRule ? (
+        {/* {activeRule ? (
           <div className="mt-2 text-[12px] text-muted-foreground">
             <div>
               <span>当前货件组：</span>
@@ -151,7 +151,7 @@ export default function ProductParamsCard({
               重量范围：{activeRule.weightG.min} ~ {activeRule.weightG.max} g（{(activeRule.weightG.min/1000).toFixed(3)} ~ {(activeRule.weightG.max/1000).toFixed(3)} kg）
             </div>
           </div>
-        ) : null}
+        ) : null} */}
 
         {/* 体积计费提示框：仅在“取大者计费”时显示（无论是否超限） */}
         {isDimBilling ? (

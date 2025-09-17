@@ -109,7 +109,7 @@ export default function ResultSummary({
             提示：该方案利润率 {(show.breakdown.margin * 100).toFixed(2)}% 超过上限 {(maxMargin * 100).toFixed(0)}%，已按未加盖帽排序返回。可调低上限或忽略此提示。
           </div>
         )}
-        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+        <div className="mt-2 grid grid-cols-[3fr_7fr] gap-x-4 gap-y-1">
           <span>平台佣金：</span>
           <span>
             ₽ {show.breakdown.commission_rub.toFixed(2)} / ¥ {(show.breakdown.commission_rub / rubPerCny).toFixed(2)}
