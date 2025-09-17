@@ -114,6 +114,7 @@ export default function OzonPage() {
     weightG: number;
   } | null>(null);
   const lastDimsKeyRef = useRef<string | null>(null);
+  const dimsOverTimerRef = useRef<number | null>(null);
 
   // 汇率（RUB/CNY）
   const [rubPerCny, setRubPerCny] = useState<number>(11.830961);
@@ -656,7 +657,7 @@ export default function OzonPage() {
         })();
     const pi = Math.max(0, br.profit_cny * q);
     return { q_norm: q, pi_norm_cny: pi };
-  }, [demandModel, sliderPrice, chartSets.globalMin, chartSets.globalMax, groupAtSliderPrice, rates, chartTriple.carrier, chartTriple.tier, chartTriple.delivery, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl, ceEpsilon, cePrefP0]);
+  }, [demandModel, sliderPrice, chartSets.globalMin, chartSets.globalMax, groupAtSliderPrice, rates, chartTriple.carrier, chartTriple.tier, chartTriple.delivery, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl, ceEpsilon, cePrefP0, logisticP10, logisticP90]);
 
   // 总利润推荐价（π 最大）：基于当前承运商三元组，在全局区间按段采样求最大值
   const recommendPriceCE = useMemo<number | null>(() => {
@@ -808,20 +809,24 @@ export default function OzonPage() {
 
   // 尺寸超限检测：当“售价+重量”确定组后，若当前尺寸超过该组限制，则弹窗提示
   useEffect(() => {
-    if (sliderPrice === null) return;
-    const rule = OZON_GROUP_RULES.find(r => r.group === groupAtSliderPrice);
-    if (!rule || !rule.dimsLimit) return;
-    const { l, w, h } = dims;
+    if (!activeRuleAtSlider?.dimsLimit) return;
+    const { sum_cm_max, longest_cm_max } = activeRuleAtSlider.dimsLimit;
+    const l = dims.l, w = dims.w, h = dims.h;
     const sum = (isFinite(l)?l:0) + (isFinite(w)?w:0) + (isFinite(h)?h:0);
     const longest = Math.max(isFinite(l)?l:0, isFinite(w)?w:0, isFinite(h)?h:0);
-    const over = sum > rule.dimsLimit.sum_cm_max + 1e-9 || longest > rule.dimsLimit.longest_cm_max + 1e-9;
-    const key = `${groupAtSliderPrice}|${rule.dimsLimit.sum_cm_max}|${rule.dimsLimit.longest_cm_max}|${l}|${w}|${h}`;
+    const over = sum > sum_cm_max + 1e-9 || longest > longest_cm_max + 1e-9;
+    const key = `${groupAtSliderPrice}|${sum_cm_max}|${longest_cm_max}|${l}|${w}|${h}`;
+    // 清除上一个定时器
+    if (dimsOverTimerRef.current) { clearTimeout(dimsOverTimerRef.current); dimsOverTimerRef.current = null; }
     if (over && lastDimsKeyRef.current !== key) {
-      setDimsInfo({ group: groupAtSliderPrice, rule, dims: { l, w, h }, sum: Math.round(sum*100)/100, longest: Math.round(longest*100)/100, price: sliderPrice, weightG });
-      setDimsOpen(true);
-      lastDimsKeyRef.current = key;
+      setDimsInfo({ group: groupAtSliderPrice, rule: activeRuleAtSlider, dims: { l, w, h }, sum: Math.round(sum*100)/100, longest: Math.round(longest*100)/100, price: sliderPrice ?? 0, weightG });
+      // 延迟3秒再弹框，避免用户输入过程频繁打断
+      dimsOverTimerRef.current = window.setTimeout(() => {
+        setDimsOpen(true);
+        lastDimsKeyRef.current = key;
+      }, 3000);
     }
-  }, [sliderPrice, groupAtSliderPrice, dims.l, dims.w, dims.h, weightG]);
+  }, [sliderPrice, groupAtSliderPrice, dims.l, dims.w, dims.h, weightG, activeRuleAtSlider?.dimsLimit?.sum_cm_max, activeRuleAtSlider?.dimsLimit?.longest_cm_max]);
 
   // 当前滑块对应的“即时详情”（不需要点击应用）
   const currentItem = useMemo(() => {

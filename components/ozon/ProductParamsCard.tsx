@@ -136,36 +136,40 @@ export default function ProductParamsCard({
           </div>
         </div>
         {/* <p className="mt-1 text-[11px] text-muted-foreground">用于平台体积计费（任一边 ≥ 40cm）。</p> */}
-        {/* 实时提示：本组限制 + 体积重预览 */}
-        <div className="mt-2 rounded-md border bg-accent/20 text-[12px] px-2 py-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-muted-foreground">当前货件组：</span>
-            <span className="font-medium">{activeGroup}</span>
-          </div>
-          {activeRule?.dimsLimit ? (
-            <div className="mt-1">
-              <span className={"mr-1 " + (overLimit ? "text-red-600" : "text-muted-foreground")}>本组限制：</span>
-              <span className={overLimit ? "text-red-700" : undefined}>
-                三边之和 ≤ {activeRule.dimsLimit.sum_cm_max} cm，最长边 ≤ {activeRule.dimsLimit.longest_cm_max} cm
-              </span>
-              <div className="mt-1 text-muted-foreground">
-                你的尺寸：{dims.l} × {dims.w} × {dims.h} cm（和 = {sum.toFixed(1)} cm，最长边 = {longest.toFixed(1)} cm）
+        {/* 实时提示（仅在超标时显示） */}
+        {overLimit ? (
+          <div className="mt-2 rounded-md border bg-accent/20 text-[12px] px-2 py-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-muted-foreground">当前货件组：</span>
+              <span className="font-medium">{activeGroup}</span>
+            </div>
+            {activeRule?.dimsLimit ? (
+              <div className="mt-1">
+                <span className={"mr-1 " + (overLimit ? "text-red-600" : "text-muted-foreground")}>本组限制：</span>
+                <span className={overLimit ? "text-red-700" : undefined}>
+                  三边之和 ≤ {activeRule.dimsLimit.sum_cm_max} cm，最长边 ≤ {activeRule.dimsLimit.longest_cm_max} cm
+                </span>
+                <div className="mt-1 text-muted-foreground">
+                  你的尺寸：{dims.l} × {dims.w} × {dims.h} cm（和 = {sum.toFixed(1)} cm，最长边 = {longest.toFixed(1)} cm）
+                </div>
               </div>
-            </div>
-          ) : null}
-          <div className="mt-1">
-            <span className="text-muted-foreground">体积重预估：</span>
-            <span>{volKg.toFixed(3)} kg</span>
-            <span className="text-muted-foreground">（按 长×宽×高 ÷ {divisor}）</span>
+            ) : null}
+            {activeRule?.billing === "max_of_physical_and_dimensional" ? (
+              <>
+                <div className="mt-1">
+                  <span className="text-muted-foreground">体积重预估：</span>
+                  <span>{volKg.toFixed(3)} kg</span>
+                  <span className="text-muted-foreground">（按 长×宽×高 ÷ {divisor}）</span>
+                </div>
+                <div className="mt-1 text-muted-foreground">
+                  计费重量取大者：max(实际重 {weightUnit === "kg" ? ((weightG/1000).toFixed(3)+" kg") : `${weightG} g`}, 体积重 {volKg.toFixed(3)} kg)
+                </div>
+              </>
+            ) : (
+              <div className="mt-1 text-muted-foreground">计费方式：物理重量</div>
+            )}
           </div>
-          {activeRule?.billing === "max_of_physical_and_dimensional" ? (
-            <div className="mt-1 text-muted-foreground">
-              计费重量取大者：max(实际重 {weightUnit === "kg" ? (weightG/1000).toFixed(3)+" kg" : `${weightG} g`}, 体积重 {volKg.toFixed(3)} kg)
-            </div>
-          ) : (
-            <div className="mt-1 text-muted-foreground">计费方式：物理重量</div>
-          )}
-        </div>
+        ) : null}
       </CardContent>
     </Card>
   );
