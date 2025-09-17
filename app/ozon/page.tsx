@@ -1108,7 +1108,7 @@ export default function OzonPage() {
 
         {!listExpanded ? (
           <div className="flex justify-center">
-            <Button onClick={() => setListExpanded(true)}>查看更多</Button>
+            <Button onClick={() => setListExpanded(true)}>查看更多物流商</Button>
           </div>
         ) : (
           <>

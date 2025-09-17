@@ -16,7 +16,7 @@ export default function MePage() {
             计算中国邮政运费
           </a>
         </div>
-        <div className="text-xs text-muted-foreground">无需登录 · 移动/桌面适配 · 免费使用</div>
+        <div className="text-xs text-muted-foreground">无需登录 · 移动/桌面适配</div>
       </section>
 
       {/* Features */}
@@ -70,9 +70,9 @@ export default function MePage() {
       </section>
 
       {/* Footnote */}
-      <section className="mx-auto max-w-4xl">
+      {/* <section className="mx-auto max-w-4xl">
         <p className="text-xs text-muted-foreground">规则配置已抽离至 <code>config/ozon_groups.ts</code>，便于按需调整货件组的尺寸与计费规则。</p>
-      </section>
+      </section> */}
     </div>
   );
 }
