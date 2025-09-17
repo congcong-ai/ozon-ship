@@ -13,6 +13,11 @@
 - STATIC_TARGET_DIR：静态站点目录（默认 `/var/www/ozon-ship`）
 - DOMAIN：Nginx 绑定域名（默认 `ozon-ship.xixisys.com`）
 
+此外，为了统计“使用量（记录 IP）”，脚本提供如下两种辅助模式：
+
+- `usage-logging`：在服务器上启用访问日志文件、安装 logrotate 规则与报表脚本。
+- `usage-report`：远程执行报表脚本并输出“今日/昨日”统计。
+
 ## 一、纯静态部署（推荐，当前无需后端）
 
 静态部署不需要 Node 进程，Nginx 直接服务 `out/` 产物。
@@ -31,6 +36,21 @@
   - 使用 `docs/deploy/nginx-ozon-ship-static.conf` 写入 `/etc/nginx/sites-available/ozon-ship.xixisys.com.conf` 并 reload
   - 若需 HTTPS：`sudo certbot --nginx -d ${DOMAIN}`
 
+- 启用访问日志与使用量统计（记录 IP）：
+  ```bash
+  # 第一步（如未执行过）：确保 Nginx 站点配置包含 access_log（static-nginx 模式已内置）
+  ./deploy.sh --mode static-nginx
+
+  # 第二步：安装访问日志与报表工具（logrotate + /usr/local/bin/ozon-usage-report）
+  ./deploy.sh --mode usage-logging
+
+  # 第三步：查看统计（或直接在服务器上执行 ozon-usage-report today）
+  ./deploy.sh --mode usage-report
+  ```
+  - 访问日志路径：`/var/log/nginx/ozon-ship.access.log`（格式：combined，含 IP/Referer/UA）
+  - logrotate：按日轮转，保留 14 天，启用 gzip 压缩
+  - 报表脚本（服务器上）：`ozon-usage-report [today|yesterday|all]`
+
 ## 二、有后端部署（Node 进程 + Supervisor + Nginx 反代 3001）
 
 - 首次初始化（安装 Nginx/Node/Supervisor 并下发配置）：
@@ -43,6 +63,8 @@
   ./deploy.sh --mode supervisor
   ```
   - 端口：3001（已在脚本中遵循“先杀端口再启动”的规则）
+  - 访问日志：`./deploy.sh --mode supervisor-bootstrap` 写入的 Nginx 模板已包含
+    `access_log /var/log/nginx/ozon-ship.access.log;`，可直接执行 `./deploy.sh --mode usage-logging` 安装报表脚本。
 
 ## 三、基于 Git 的自动部署（可选）
 
@@ -56,9 +78,18 @@
 - 静态构建脚本：`scripts/build_static.sh`
 - Nginx（静态）：`docs/deploy/nginx-ozon-ship-static.conf`（安装到 `/etc/nginx/sites-available/ozon-ship.xixisys.com.conf`）
 - Supervisor：`docs/deploy/supervisor-ozon-ship.conf`
+- 使用量统计：通过 `./deploy.sh --mode usage-logging` 安装 `/usr/local/bin/ozon-usage-report`
 - 初始化/部署（Supervisor）：`scripts/bootstrap_supervisor.sh`、`scripts/deploy_supervisor.sh`
 - Git 自动部署：`scripts/setup_git_deploy.sh`
 
 ## 备注
 - 静态导出构建时，`scripts/build_static.sh` 会临时禁用 `app/api/`，并让前端直接 import `data/chinapost_russia.json`；构建完成后自动还原。
 - 若后续启用数据库与登录功能，建议切换为“有后端部署”模式。
+
+### 使用量统计说明
+- 本项目统计在服务器侧完成，基于 Nginx access_log，不涉及前端埋点与第三方 SDK。
+- 报表口径：
+  - PV：匹配到的日志行数。
+  - UV：独立 IP 数（`$remote_addr` 去重）。
+  - Top 列表：按请求路径、Referer 与 IP 进行聚合排序（取前 10）。
+- 若站点放在 CDN/反代后，请确保正确透传真实客户端 IP（例如通过 `X-Forwarded-For` 配置 real_ip 模块），否则 UV 可能失真。

@@ -89,6 +89,7 @@ function supervisor_bootstrap() {
 server {
   listen 80; listen [::]:80;
   server_name ${DOMAIN};
+  access_log /var/log/nginx/ozon-ship.access.log;
   location ^~ /.well-known/acme-challenge/ { default_type "text/plain"; root /var/www/certbot; }
   client_max_body_size 20m; gzip on; gzip_types text/plain text/css application/json application/javascript image/svg+xml;
   location / { proxy_pass http://127.0.0.1:3001; proxy_http_version 1.1; proxy_set_header Host $host; proxy_set_header X-Real-IP $remote_addr; proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; proxy_set_header X-Forwarded-Proto $scheme; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade"; }
@@ -117,25 +118,69 @@ function supervisor_deploy() {
   '"
 }
 
+function setup_usage_logging() {
+  need SERVER "$SERVER"; need SSH_USER "$SSH_USER"
+  echo "==> 在服务器开启访问日志并配置 logrotate + 报表脚本（通过 scp 下发文件）"
+  # 下发脚本与 logrotate 规则
+  scp -o StrictHostKeyChecking=accept-new "${ROOT_DIR}/scripts/ozon-usage-report" "${SSH_USER}@${SERVER}:/tmp/ozon-usage-report"
+  scp -o StrictHostKeyChecking=accept-new "${ROOT_DIR}/docs/deploy/logrotate-ozon-ship" "${SSH_USER}@${SERVER}:/tmp/logrotate-ozon-ship"
+  # 远程安装与重载 Nginx
+  ssh -o StrictHostKeyChecking=accept-new "${SSH_USER}@${SERVER}" sudo bash -lc "'
+    set -e
+    mv /tmp/ozon-usage-report /usr/local/bin/ozon-usage-report
+    chmod +x /usr/local/bin/ozon-usage-report
+    mv /tmp/logrotate-ozon-ship /etc/logrotate.d/ozon-ship
+    touch /var/log/nginx/ozon-ship.access.log
+    chown www-data:adm /var/log/nginx/ozon-ship.access.log || true
+    chmod 0640 /var/log/nginx/ozon-ship.access.log || true
+    # 将 SSH 用户加入 adm 组，以便读取 /var/log/nginx/* 日志
+    if ! id -nG '"${SSH_USER}"' | grep -qw adm; then
+      usermod -aG adm '"${SSH_USER}"'
+    fi
+    nginx -t && systemctl reload nginx
+  '"
+  echo "已在服务器安装：/usr/local/bin/ozon-usage-report，可执行："
+  echo "  ssh ${SSH_USER}@${SERVER} ozon-usage-report today"
+  echo "如遇 Permission denied，请重新登录服务器以生效用户组（adm），再执行 usage-report。"
+}
+
+function usage_report() {
+  need SERVER "$SERVER"; need SSH_USER "$SSH_USER"
+  echo "==> 拉取服务器使用量统计（今日与昨日）"
+  ssh -o StrictHostKeyChecking=accept-new "${SSH_USER}@${SERVER}" bash -lc "'
+    set -e
+    if ! command -v ozon-usage-report >/dev/null 2>&1; then
+      echo \"未检测到 ozon-usage-report，请先执行：./deploy.sh --mode usage-logging\"; exit 1
+    fi
+    ozon-usage-report today || sudo -n ozon-usage-report today || true
+    echo
+    ozon-usage-report yesterday || sudo -n ozon-usage-report yesterday || true
+  '"
+}
+
 function choose_mode() {
   echo "请选择部署模式："
   echo "  1) static               — 构建并 rsync 到 ${STATIC_TARGET_DIR}"
   echo "  2) static-nginx         — 在服务器安装/更新静态站点的 Nginx 配置"
   echo "  3) supervisor-bootstrap — 安装 Nginx/Node/Supervisor 并配置站点（有后端）"
   echo "  4) supervisor           — rsync + 构建 + supervisor 重启（有后端）"
-  read -rp "输入序号 [1-4]：" num
+  echo "  5) usage-logging        — 配置访问日志与报表脚本（记录 IP）"
+  echo "  6) usage-report         — 输出服务器使用量统计（今日/昨日）"
+  read -rp "输入序号 [1-6]：" num
   case "$num" in
     1) MODE=static ;;
     2) MODE=static-nginx ;;
     3) MODE=supervisor-bootstrap ;;
     4) MODE=supervisor ;;
+    5) MODE=usage-logging ;;
+    6) MODE=usage-report ;;
     *) echo "无效选择"; exit 1 ;;
   esac
 }
 
 MODE=${1:-}
 if [[ "$MODE" == "--mode" ]]; then MODE=${2:-}; fi
-if [[ "$MODE" =~ ^(--mode=)?(static|static-nginx|supervisor|supervisor-bootstrap)$ ]]; then
+if [[ "$MODE" =~ ^(--mode=)?(static|static-nginx|supervisor|supervisor-bootstrap|usage-logging|usage-report)$ ]]; then
   MODE=${MODE#--mode=}
 else
   choose_mode
@@ -156,6 +201,12 @@ case "$MODE" in
     ;;
   supervisor)
     supervisor_deploy
+    ;;
+  usage-logging)
+    setup_usage_logging
+    ;;
+  usage-report)
+    usage_report
     ;;
   *)
     echo "未知模式：$MODE"; exit 1 ;;

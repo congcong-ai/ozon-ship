@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# 用法：ozon-usage-report [today|yesterday|all]
+# 依赖：zcat、awk、sort、uniq、gzip（系统自带）
+
+PERIOD=${1:-today}  # today|yesterday|all
+LOG_GLOB="/var/log/nginx/ozon-ship.access.log*"
+TMP=$(mktemp)
+trap 'rm -f "$TMP"' EXIT
+
+# 收集日志（含 .gz）
+for f in $(ls -1 $LOG_GLOB 2>/dev/null | sort -V); do
+  # 仅处理可读文件（避免 Permission denied 中止脚本）
+  if [[ -r "$f" ]]; then
+    if [[ "$f" == *.gz ]]; then
+      zcat "$f" 2>/dev/null || true
+    else
+      cat "$f" 2>/dev/null || true
+    fi
+  fi
+done > "$TMP"
+
+# 过滤时段（强制使用英文月份缩写与 Nginx 一致）
+case "$PERIOD" in
+  today)
+    KEY=$(LC_TIME=C date +"[%d/%b/%Y:")
+    ;;
+  yesterday)
+    KEY=$(LC_TIME=C date -d "yesterday" +"[%d/%b/%Y:")
+    ;;
+  all)
+    KEY=""
+    ;;
+  *)
+    echo "用法：ozon-usage-report [today|yesterday|all]"; exit 1;;
+esac
+
+if [[ -n "$KEY" ]]; then
+  DATA=$(grep -F "$KEY" "$TMP" || true)
+else
+  DATA=$(cat "$TMP")
+fi
+
+if [[ -z "$DATA" ]]; then
+  echo "没有匹配到日志记录（可能尚未产生访问或未启用 access_log）。"; exit 0
+fi
+
+echo "=== 使用量统计（${PERIOD}) ==="
+echo
+# PV
+PV=$(printf "%s\n" "$DATA" | wc -l | awk '{print $1}')
+# UV（按 IP）
+UV=$(printf "%s\n" "$DATA" | awk '{print $1}' | sort -u | wc -l | awk '{print $1}')
+echo "PV（页面访问数）：$PV"
+echo "UV（独立 IP 数）：$UV"
+echo
+
+echo "Top 10 页面："
+printf "%s\n" "$DATA" | awk -F\" '{print $2}' | awk '{print $2}' | sed 's/?.*//' | sort | uniq -c | sort -rn | head -n 10
+echo
+
+echo "Top 10 引荐来源："
+printf "%s\n" "$DATA" | awk -F\" '{print $4}' | awk 'length($0)>0' | sort | uniq -c | sort -rn | head -n 10
+echo
+
+echo "Top 10 IP："
+printf "%s\n" "$DATA" | awk '{print $1}' | sort | uniq -c | sort -rn | head -n 10
