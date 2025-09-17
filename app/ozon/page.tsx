@@ -668,7 +668,7 @@ export default function OzonPage() {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-xl font-semibold">
           <PackageSearch className="h-5 w-5 text-primary" />
-          <span>Ozon 最优售价计算器</span>
+          <span>Ozon运费计算器 - 合作物流</span>
         </div>
       </div>
       <div className="text-sm text-muted-foreground flex flex-col gap-1">

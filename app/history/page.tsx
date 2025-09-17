@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PackageSearch } from "lucide-react";
 
 type HistoryItem = {
   ts: number;
@@ -29,9 +30,12 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="py-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">历史记录</h1>
+    <div className="py-6 space-y-6">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-xl font-semibold">
+          <PackageSearch className="h-5 w-5 text-primary" />
+          <span>历史记录</span>
+        </div>
         {items.length > 0 && (
           <button className="text-sm text-red-600 underline" onClick={clearHistory}>清空</button>
         )}

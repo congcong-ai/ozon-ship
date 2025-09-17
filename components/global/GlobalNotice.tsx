@@ -6,6 +6,11 @@ import { Button } from "@/components/ui/button";
 const LS_KEY = "ozon-ship:global-notice:v1:dismissed";
 
 export default function GlobalNotice() {
+  // 环境开关（打包时静态替换），默认关闭
+  const enabledValue = process.env.NEXT_PUBLIC_SHOW_GLOBAL_NOTICE as string | undefined;
+  const enabled = enabledValue === "1" || enabledValue === "true" || enabledValue === "on";
+  if (!enabled) return null;
+
   const [mounted, setMounted] = React.useState(false);
   const [visible, setVisible] = React.useState(false);
 

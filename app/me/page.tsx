@@ -3,7 +3,8 @@ export default function MePage() {
     <div className="py-8 space-y-10">
       {/* Hero */}
       <section className="mx-auto max-w-4xl text-center space-y-4">
-        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Ozon Ship · 售价与运费计算助手</h1>
+        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Ozon运费计算器</h1>
+        <h2 className="text-xl md:text-xl font-semibold tracking-tight"> 售价与运费计算助手</h2>
         <p className="text-sm md:text-base text-muted-foreground">
           为跨境卖家与运营团队打造的轻量工具。用更少时间，做更准决策：快速得到更合理的 Ozon 售价与更合适的物流方案。
         </p>

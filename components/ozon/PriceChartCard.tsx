@@ -60,10 +60,11 @@ export default function PriceChartCard({
   const yMax = typeof maxMargin === 'number' && maxMargin > 0 ? maxMargin : yMin + 1;
   const yMid = (yMin + yMax) / 2;
   return (
-    <section className="rounded-lg border p-4 space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="font-medium">{title}</h2>
-        <div className="flex items-center gap-2">
+    <section className="rounded-lg border p-4 space-y-4 sm:space-y-3">
+      {/* 头部在小屏改为纵向堆叠，避免标题被压缩成竖排；大屏保持左右分布 */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="font-medium flex-shrink-0">{title}</h2>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
           <FxToolbar {...fxToolbar} />
           <Button size="sm" variant="default" onClick={onOpenSettings}>
             <Settings className="mr-1 h-4 w-4" />
@@ -71,7 +72,7 @@ export default function PriceChartCard({
           </Button>
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 gap-4 sm:gap-3">
         <PriceControlsBar
           sliderRange={sliderRange}
           sliderPrice={sliderPrice}

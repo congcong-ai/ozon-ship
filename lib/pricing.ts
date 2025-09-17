@@ -6,11 +6,20 @@ export async function fetchServices(): Promise<Service[]> {
     const data = (await import("@/data/chinapost_russia.json")) as any;
     return (data.services || []) as Service[];
   }
-  // 动态模式：从 API 读取（需要 Node 运行时）
-  const res = await fetch("/api/services", { cache: "no-store" });
-  if (!res.ok) throw new Error("failed to load services");
-  const json = (await res.json()) as { services: Service[] };
-  return json.services;
+  // 动态模式：从 API 读取（需要 Node 运行时）；失败时回退到静态数据
+  try {
+    const res = await fetch("/api/services", { cache: "no-store" });
+    if (res.ok) {
+      const json = (await res.json()) as { services: Service[] };
+      return json.services;
+    } else {
+      if (typeof window !== 'undefined') console.warn("/api/services 响应非 2xx，使用本地静态数据回退。status=", res.status);
+    }
+  } catch (err) {
+    if (typeof window !== 'undefined') console.warn("/api/services 请求失败，使用本地静态数据回退。", err);
+  }
+  const data = (await import("@/data/chinapost_russia.json")) as any;
+  return (data.services || []) as Service[];
 }
 
 function toGrams(input: { unit: "kg" | "g"; weight: number }) {

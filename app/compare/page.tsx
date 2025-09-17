@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PackageSearch } from "lucide-react";
 
 type ComparePayload = {
   ts: number;
@@ -24,12 +25,17 @@ export default function ComparePage() {
   }, []);
 
   return (
-    <div className="py-6">
-      <h1 className="text-2xl font-semibold">比较</h1>
+    <div className="py-6 space-y-6">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-xl font-semibold">
+          <PackageSearch className="h-5 w-5 text-primary" />
+          <span>比较</span>
+        </div>
+      </div>
       {!payload ? (
-        <p className="mt-2 text-sm text-muted-foreground">暂无比较数据。在计算页勾选渠道后点击“比较”按钮即可在此查看。</p>
+        <p className="text-sm text-muted-foreground">暂无比较数据。在计算页勾选渠道后点击“比较”按钮即可在此查看。</p>
       ) : (
-        <div className="mt-4">
+        <div>
           <div className="text-sm text-muted-foreground">
             输入：{payload.input.weight}
             {payload.input.unit}，尺寸 {payload.input.dims.l}×{payload.input.dims.w}×{payload.input.dims.h} (cm)

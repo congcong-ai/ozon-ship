@@ -32,3 +32,15 @@
 body {
   @apply bg-background text-foreground;
 }
+
+/* 全局防止横向滚动（移动端部分组件可能在极端宽度下触发超宽） */
+html, body {
+  overflow-x: hidden;
+}
+
+/* 移动端优化：避免 iOS Safari 在输入框聚焦时自动放大页面（当字体 < 16px 会触发） */
+@media (max-width: 640px) {
+  input, select, textarea, button {
+    font-size: 16px;
+  }
+}

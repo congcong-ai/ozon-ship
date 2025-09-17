@@ -51,12 +51,13 @@ export default function HomePage() {
   }, [computed, query]);
 
   return (
-    <div className="py-6">
-      <header className="flex flex-col gap-2 py-4 sm:flex-row sm:items-end sm:justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-          <Calculator className="h-6 w-6" /> 中国邮政到俄罗斯 运费计算器
-        </h1>
-      </header>
+    <div className="py-6 space-y-6">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-xl font-semibold">
+          <Calculator className="h-5 w-5 text-primary" />
+          <span>Ozon运费计算器 - 中国邮政</span>
+        </div>
+      </div>
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-lg border p-4">
@@ -124,7 +125,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mt-6 flex items-center gap-2">
+      <section className="flex items-center gap-2">
         <div className="relative flex-1">
           <input
             value={query}
@@ -136,7 +137,7 @@ export default function HomePage() {
         </div>
       </section>
       {/* 列表布局：长列表而非宫格卡片 */}
-      <section className="mt-4 rounded-lg border divide-y">
+      <section className="rounded-lg border divide-y">
         {filtered.map((s) => (
           <ServiceRow key={s.id} service={s} />
         ))}

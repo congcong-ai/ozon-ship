@@ -10,7 +10,7 @@ export default function FeedbackFab() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <div className="fixed right-4 bottom-24 sm:bottom-8 z-50">
+      <div className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+6rem)] sm:bottom-8 z-50">
         <DialogTrigger asChild>
           <Button
             className="rounded-full shadow-lg h-11 px-4 gap-2"

@@ -37,11 +37,11 @@ export default function PriceControlsBar({
   }
   return (
     <div>
-      <div className="flex items-end justify-between text-xs text-muted-foreground">
+      <div className="flex items-end justify-between text-xs text-muted-foreground mb-2">
         <span>₽ {sliderRange.min}</span>
         <span>₽ {sliderRange.max}</span>
       </div>
-      <div className="mt-1">
+      <div className="mt-0 mb-3">
         <Slider
           value={[sliderPrice ?? sliderRange.min]}
           min={sliderRange.min}
@@ -53,9 +53,9 @@ export default function PriceControlsBar({
           }}
         />
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
         <div className="inline-flex items-center gap-2">
-          <span>当前售价：</span>
+          <span>售价：</span>
           <Input
             className="h-8 w-28"
             type="number"
