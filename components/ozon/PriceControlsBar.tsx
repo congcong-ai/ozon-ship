@@ -37,23 +37,26 @@ export default function PriceControlsBar({
   }
   return (
     <div>
-      <div className="flex items-end justify-between text-xs text-muted-foreground mb-2">
-        <span>₽ {sliderRange.min}</span>
-        <span>₽ {sliderRange.max}</span>
+      {/* 突出显示的滑块区：浅色背景 + 较大内外边距 */}
+      <div className="rounded-md bg-muted/40 px-3 sm:px-4 py-5 sm:py-6 my-5">
+        <div className="flex items-end justify-between text-xs text-muted-foreground mb-3">
+          <span>₽ {sliderRange.min}</span>
+          <span>₽ {sliderRange.max}</span>
+        </div>
+        <div>
+          <Slider
+            value={[sliderPrice ?? sliderRange.min]}
+            min={sliderRange.min}
+            max={sliderRange.max}
+            step={0.01}
+            onValueChange={(v)=> {
+              if (!v || v.length === 0 || typeof v[0] !== 'number' || !isFinite(v[0])) return;
+              setSliderPrice(Math.round(v[0]*100)/100);
+            }}
+          />
+        </div>
       </div>
-      <div className="mt-0 mb-3">
-        <Slider
-          value={[sliderPrice ?? sliderRange.min]}
-          min={sliderRange.min}
-          max={sliderRange.max}
-          step={0.01}
-          onValueChange={(v)=> {
-            if (!v || v.length === 0 || typeof v[0] !== 'number' || !isFinite(v[0])) return;
-            setSliderPrice(Math.round(v[0]*100)/100);
-          }}
-        />
-      </div>
-      <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+      <div className="mt-4 sm:mt-5 flex flex-wrap items-center gap-3 text-sm">
         <div className="inline-flex items-center gap-2">
           <span>售价：</span>
           <Input
