@@ -11,12 +11,22 @@ export default function ResultSummary({
   maxMargin,
   rubPerCny,
   loadingBest,
+  costCny,
+  commission,
+  acquiring,
+  fx,
+  last_mile,
 }: {
   currentItem: ResultItem | null;
   best: ResultItem | null;
   maxMargin: number;
   rubPerCny: number;
   loadingBest?: boolean;
+  costCny?: number;
+  commission?: number;
+  acquiring?: number;
+  fx?: number;
+  last_mile?: { rate: number; min_rub: number; max_rub: number };
 }) {
   const show = currentItem || best;
 
@@ -70,18 +80,18 @@ export default function ResultSummary({
       <div className="space-y-2 text-sm">
         <div>
           {currentItem ? "当前售价：" : "推荐售价："}
-          <span className="font-semibold">₽ {show.price_rub}</span>
+          <span className="font-semibold">₽ {show.price_rub.toFixed(2)}</span>
+          <span className="text-muted-foreground"> / ¥ {(show.price_rub / rubPerCny).toFixed(2)}</span>
         </div>
         <div>
-          利润率：{(show.breakdown.margin * 100).toFixed(2)}% · 利润：₽{" "}
-          {(show.breakdown.profit_cny * rubPerCny).toFixed(2)} / ¥ {show.breakdown.profit_cny.toFixed(2)}
+          利润率：{(show.breakdown.margin * 100).toFixed(2)}% · 利润：₽ {(show.breakdown.profit_cny * rubPerCny).toFixed(2)} / ¥ {show.breakdown.profit_cny.toFixed(2)}
         </div>
         <div>
-          货件分组：{show.group} · 国际物流费（{carrierName(String(show.carrier))} / {show.tier} /{" "}
-          {deliveryZh(show.delivery)}）：₽ {show.breakdown.intl_logistics_rub.toFixed(2)}
+          货件分组：{show.group} · 国际物流费（{carrierName(String(show.carrier))} / {show.tier} / {deliveryZh(show.delivery)}）：
+          ₽ {show.breakdown.intl_logistics_rub.toFixed(2)} / ¥ {(show.breakdown.intl_logistics_rub / rubPerCny).toFixed(2)}
         </div>
         <div className="text-xs text-muted-foreground flex items-center gap-2">
-          <span>时效：{m?.eta_days ?? "-"}</span>
+          <span>时效：{m?.eta_days ?? "-"}天</span>
           {batteryBadge(m?.battery_allowed)}
         </div>
         {show.safe_range && (
@@ -101,19 +111,53 @@ export default function ResultSummary({
         )}
         <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
           <span>平台佣金：</span>
-          <span>₽ {show.breakdown.commission_rub}</span>
+          <span>
+            ₽ {show.breakdown.commission_rub.toFixed(2)} / ¥ {(show.breakdown.commission_rub / rubPerCny).toFixed(2)}
+            {typeof commission === 'number' ? <span className="text-muted-foreground">（{(commission * 100).toFixed(2)}%）</span> : null}
+          </span>
           <span>收单费：</span>
-          <span>₽ {show.breakdown.acquiring_rub}</span>
+          <span>
+            ₽ {show.breakdown.acquiring_rub.toFixed(2)} / ¥ {(show.breakdown.acquiring_rub / rubPerCny).toFixed(2)}
+            {typeof acquiring === 'number' ? <span className="text-muted-foreground">（{(acquiring * 100).toFixed(2)}%）</span> : null}
+          </span>
           <span>国际物流费：</span>
-          <span>₽ {show.breakdown.intl_logistics_rub}</span>
+          <span>
+            ₽ {show.breakdown.intl_logistics_rub.toFixed(2)} / ¥ {(show.breakdown.intl_logistics_rub / rubPerCny).toFixed(2)}
+            {show.pricing ? (
+              <span className="text-muted-foreground">（公式： (¥ {show.pricing.base_cny.toFixed(2)} + ¥ {show.pricing.per_gram_cny.toFixed(4)} × 计费重量[g]) × R）
+                {(() => {
+                  const R = rubPerCny;
+                  const base = show.pricing!.base_cny;
+                  const pg = show.pricing!.per_gram_cny;
+                  if (pg > 0 && R > 0) {
+                    const wb = Math.max(0, (show.breakdown.intl_logistics_rub / R - base) / pg);
+                    if (isFinite(wb)) return <span className="ml-1">其中 计费重量 {wb.toFixed(0)} g）</span>;
+                  }
+                  return null;
+                })()}
+              </span>
+            ) : null}
+          </span>
           <span>尾城配送费：</span>
-          <span>₽ {show.breakdown.last_mile_rub}</span>
+          <span>
+            ₽ {show.breakdown.last_mile_rub.toFixed(2)} / ¥ {(show.breakdown.last_mile_rub / rubPerCny).toFixed(2)}
+            {last_mile ? <span className="text-muted-foreground">（{(last_mile.rate * 100).toFixed(2)}%，Min ₽ {last_mile.min_rub}，Max ₽ {last_mile.max_rub}）</span> : null}
+          </span>
           <span>货币转换费：</span>
-          <span>₽ {show.breakdown.fx_fee_rub}</span>
+          <span>
+            ₽ {show.breakdown.fx_fee_rub.toFixed(2)} / ¥ {(show.breakdown.fx_fee_rub / rubPerCny).toFixed(2)}
+            {typeof fx === 'number' ? <span className="text-muted-foreground">（{(fx * 100).toFixed(2)}%）</span> : null}
+          </span>
           <span>最终回款：</span>
-          <span>₽ {show.breakdown.receipt_rub}</span>
+          <span>₽ {show.breakdown.receipt_rub.toFixed(2)} / ¥ {(show.breakdown.receipt_rub / rubPerCny).toFixed(2)}</span>
+          {typeof costCny === 'number' ? (
+            <>
+              <span>商品成本：</span>
+              <span>¥ {costCny.toFixed(2)} / ₽ {(costCny * rubPerCny).toFixed(2)}</span>
+            </>
+          ) : null}
           <span>利润(CNY)：</span>
-          <span>¥ {show.breakdown.profit_cny}</span>
+          <span>¥ {show.breakdown.profit_cny.toFixed(2)} / ₽ {(show.breakdown.profit_cny * rubPerCny).toFixed(2)}</span>
           <span>利润率：</span>
           <span>{(show.breakdown.margin * 100).toFixed(2)}%</span>
         </div>

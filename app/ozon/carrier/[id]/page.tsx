@@ -52,7 +52,7 @@ export default async function CarrierDetailPage(props: { params: Promise<{ id: s
                   <div><span className="text-muted-foreground">起步价：</span>¥ {r.pricing.base_cny}</div>
                   <div><span className="text-muted-foreground">每克：</span>¥ {r.pricing.per_gram_cny}</div>
                   <div className="flex items-center gap-2">
-                    <div><span className="text-muted-foreground">莫斯科时效：</span>{r.eta_days || '-'}</div>
+                    <div><span className="text-muted-foreground">莫斯科时效：</span>{r.eta_days || '-'}天</div>
                     {batteryBadge(r.battery_allowed)}
                   </div>
                 </div>

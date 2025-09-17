@@ -6,7 +6,7 @@ import { PackageSearch, Info } from "lucide-react";
 import { bestPricing, OZON_GROUP_RULES, computeProfitForPrice, ALL_CARRIERS } from "@/lib/ozon_pricing";
 import type { DeliveryMode, OzonPricingParams, ResultItem, OzonGroup, OzonRateTable } from "@/types/ozon";
 import { loadAllCarrierRatesCached, loadCarrierRatesCachedStrict } from "@/lib/rates_cache";
-import { computeListViaWorker } from "@/lib/worker_client";
+import { computeListViaWorker, prewarmWorker, sampleDemandLinesViaWorker, prefetchDemandLinesIdle } from "@/lib/worker_client";
 import { useOzonChart } from "@/hooks/useOzonChart";
 import type { ExtraLine } from "@/components/ozon/price-chart";
 import dynamic from "next/dynamic";
@@ -115,6 +115,7 @@ export default function OzonPage() {
   } | null>(null);
   const lastDimsKeyRef = useRef<string | null>(null);
   const dimsOverTimerRef = useRef<number | null>(null);
+  const dimsPriceRef = useRef<number | null>(null);
 
   // 汇率（RUB/CNY）
   const [rubPerCny, setRubPerCny] = useState<number>(11.830961);
@@ -227,6 +228,12 @@ export default function OzonPage() {
   const [customItem, setCustomItem] = useState<ResultItem | null>(null);
   // 曲线组模式：auto 跟随 best；或显式锁定到某一组
   const [groupMode, setGroupMode] = useState<'auto' | OzonGroup>("auto");
+  // 滑动节流：用于统计数值（销量/总利润）的轻量联动，避免每次 onValueChange 都重算
+  const [throttledSliderPrice, setThrottledSliderPrice] = useState<number | null>(null);
+  useEffect(() => {
+    const t = setTimeout(() => setThrottledSliderPrice(sliderPrice), 150);
+    return () => clearTimeout(t);
+  }, [sliderPrice]);
 
   // 本地记忆重量单位
   useEffect(() => {
@@ -529,6 +536,8 @@ export default function OzonPage() {
 
   // 最近一次 sliderPrice，用于判断“用户移动后自动收起列表”
   const lastSliderRef = useRef<number | null>(null);
+  // 记录当前售价用于尺寸超限弹窗文案
+  useEffect(() => { dimsPriceRef.current = sliderPrice; }, [sliderPrice]);
 
   // 使用 Hook 计算拼接曲线与全局端点（强制包含端点，保证铺满宽度）
   const chartParams: OzonPricingParams = {
@@ -554,28 +563,75 @@ export default function OzonPage() {
     groupColors: GROUP_COLORS,
   });
 
-  // 叠加曲线（销量/总利润）：仅在启用销量模型时计算
-  const extraLines = useMemo<ExtraLine[] | undefined>(() => {
-    if (demandModel === 'none') return undefined;
-    if (!chartSets.sets.length) return undefined;
+  // 叠加曲线（销量/总利润）：迁移至 Worker 采样
+  const [extraLines, setExtraLines] = useState<ExtraLine[] | undefined>(undefined);
+  const [extraLinesLoading, setExtraLinesLoading] = useState<boolean>(false);
+  useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      (async () => {
+        if (demandModel === 'none' || !chartSets.sets.length) { if (!cancelled) { setExtraLines(undefined); setExtraLinesLoading(false); } return; }
+        const segments = (chartSets.xSegments && chartSets.xSegments.length)
+          ? chartSets.xSegments
+          : [{ priceMin: chartSets.globalMin, priceMax: chartSets.globalMax, xMin: 0, xMax: 600, group: activeGroup }];
+        const baseParams: OzonPricingParams = {
+          weight_g: weightG,
+          dims_cm: dims,
+          cost_cny: costCny,
+          commission,
+          acquiring,
+          fx,
+          last_mile: { rate: lastmileRate, min_rub: lastmileMin, max_rub: lastmileMax },
+          rub_per_cny: rubPerCny,
+          fx_include_intl: fxIncludeIntl,
+        } as OzonPricingParams;
+        // 自适应采样密度（按分组与模型微调）
+        const groupCount = new Set(segments.map(s => s.group)).size;
+        let N = 50;
+        if (groupCount >= 4) N = 40;
+        if (groupCount >= 5) N = 35;
+        if (demandModel === 'logistic') N += 10;
+        N = Math.max(30, Math.min(90, N));
+        try {
+          setExtraLinesLoading(true);
+          const { qPts, piPts } = await sampleDemandLinesViaWorker({
+            segments,
+            rates,
+            chartTriple,
+            params: baseParams,
+            demand: {
+              model: demandModel === 'ce' ? 'ce' : 'logistic',
+              ceEpsilon,
+              cePrefP0,
+              logisticP10,
+              logisticP90,
+              globalMin: chartSets.globalMin,
+              globalMax: chartSets.globalMax,
+            },
+            vbH: 180,
+            N,
+          });
+          if (cancelled) return;
+          const out: ExtraLine[] = [];
+          if (qPts && qPts.length >= 2) out.push({ points: qPts, color: "#111827", dash: "4 2", label: "销量(相对)", interactive: true });
+          if (piPts && piPts.length >= 2) out.push({ points: piPts, color: "#ef4444", dash: "6 3", label: "总利润(相对)", interactive: true });
+          setExtraLines(out.length ? out : undefined);
+        } catch {
+          if (!cancelled) setExtraLines(undefined);
+        } finally {
+          if (!cancelled) setExtraLinesLoading(false);
+        }
+      })();
+    }, 120); // 120ms 节流
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [demandModel, chartSets.sets, chartSets.xSegments, chartSets.globalMin, chartSets.globalMax, rates, chartTriple.carrier, chartTriple.tier, chartTriple.delivery, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl, activeGroup, ceEpsilon, cePrefP0, logisticP10, logisticP90]);
+
+  // 空闲时预取“常用段”的叠加线缓存（命中内存/本地缓存可加速后续切换）
+  useEffect(() => {
+    if (demandModel === 'none' || !chartSets.sets.length) return;
     const segments = (chartSets.xSegments && chartSets.xSegments.length)
       ? chartSets.xSegments
       : [{ priceMin: chartSets.globalMin, priceMax: chartSets.globalMax, xMin: 0, xMax: 600, group: activeGroup }];
-    const vbH = 180; // 与 price-chart 保持一致
-    const ε = ceEpsilon; // 可调弹性
-    const P0 = (typeof cePrefP0 === 'number' && isFinite(cePrefP0) && cePrefP0 > 0)
-      ? cePrefP0
-      : Math.max(1, (chartSets.globalMin + chartSets.globalMax) / 2); // CE 模型参考价
-    const LOG_K = Math.log(9); // 2*ln9 用于 logistic 斜率
-    // 逻辑斯蒂：优先使用用户设置的 P10/P90，否则用全局 10%-90%
-    const p10d = chartSets.globalMin + 0.1 * Math.max(0, chartSets.globalMax - chartSets.globalMin);
-    const p90d = chartSets.globalMin + 0.9 * Math.max(0, chartSets.globalMax - chartSets.globalMin);
-    const p10 = (typeof logisticP10 === 'number' && isFinite(logisticP10)) ? logisticP10 : p10d;
-    const p90 = (typeof logisticP90 === 'number' && isFinite(logisticP90)) ? logisticP90 : p90d;
-    const kG = (2*LOG_K) / Math.max(1e-6, p90 - p10);
-    const pmidG = (p10 + p90) / 2;
-
-    // 统一的参数构造
     const baseParams: OzonPricingParams = {
       weight_g: weightG,
       dims_cm: dims,
@@ -587,43 +643,31 @@ export default function OzonPage() {
       rub_per_cny: rubPerCny,
       fx_include_intl: fxIncludeIntl,
     } as OzonPricingParams;
-
-    type Sample = { x: number; price: number; q: number; u: number; pi: number };
-    const samples: Sample[] = [];
-    for (const seg of segments) {
-      const N = 60;
-      for (let i = 0; i <= N; i++) {
-        const t = i / N;
-        const P = seg.priceMin + t * Math.max(0, seg.priceMax - seg.priceMin);
-        if (!isFinite(P) || P <= 0) continue;
-        const x = seg.xMin + t * Math.max(0, seg.xMax - seg.xMin);
-        const g = seg.group || groupFromPrice(P) || activeGroup;
-        // 三元组固定为 chartTriple
-        const r = rates.find(r => r.group === g && r.carrier === chartTriple.carrier && r.tier === chartTriple.tier && r.delivery === chartTriple.delivery);
-        const br = r ? computeProfitForPrice(Math.round(P * 100) / 100, g, r.pricing, baseParams) : null;
-        const U = br ? br.profit_cny : 0;
-        const qRaw = (demandModel === 'ce')
-          ? Math.pow(P / P0, -ε)
-          : (1 / (1 + Math.exp(kG * (P - pmidG))));
-        const pi = Math.max(0, U * qRaw);
-        samples.push({ x, price: P, q: qRaw, u: U, pi });
-      }
-    }
-    if (!samples.length) return undefined;
-    const qMax = Math.max(...samples.map(s => s.q));
-    const piMax = Math.max(...samples.map(s => s.pi));
-    const qPts = qMax > 0 ? samples.map(s => ({ x: s.x, y: vbH - (s.q / qMax) * (vbH - 20), price: s.price })) : [];
-    const piPts = piMax > 0 ? samples.map(s => ({ x: s.x, y: vbH - (s.pi / piMax) * (vbH - 20), price: s.price })) : [];
-    const out: ExtraLine[] = [];
-    if (qPts.length >= 2) out.push({ points: qPts, color: "#111827", dash: "4 2", label: "销量(相对)", interactive: true });
-    if (piPts.length >= 2) out.push({ points: piPts, color: "#ef4444", dash: "6 3", label: "总利润(相对)", interactive: true });
-    return out.length ? out : undefined;
-  }, [demandModel, chartSets.sets, chartSets.xSegments, chartSets.globalMin, chartSets.globalMax, sliderPrice, rates, chartTriple.carrier, chartTriple.tier, chartTriple.delivery, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl, activeGroup, ceEpsilon, cePrefP0, logisticP10, logisticP90]);
+    const groupCount = new Set(segments.map(s => s.group)).size;
+    let N = 50; if (groupCount >= 4) N = 40; if (groupCount >= 5) N = 35; if (demandModel === 'logistic') N += 10; N = Math.max(30, Math.min(90, N));
+    prefetchDemandLinesIdle({
+      segments,
+      rates,
+      chartTriple,
+      params: baseParams,
+      demand: {
+        model: demandModel === 'ce' ? 'ce' : 'logistic',
+        ceEpsilon,
+        cePrefP0,
+        logisticP10,
+        logisticP90,
+        globalMin: chartSets.globalMin,
+        globalMax: chartSets.globalMax,
+      },
+      vbH: 180,
+      N,
+    });
+  }, [demandModel, chartSets.sets, chartSets.xSegments, chartSets.globalMin, chartSets.globalMax, rates, chartTriple.carrier, chartTriple.tier, chartTriple.delivery, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl, activeGroup, ceEpsilon, cePrefP0, logisticP10, logisticP90]);
 
   // 当前滑块位置的销量与总利润（归一化）数值
   const demandStats = useMemo<{ q_norm: number; pi_norm_cny: number } | null>(() => {
     if (demandModel === 'none') return null;
-    if (sliderPrice == null || !isFinite(sliderPrice)) return null;
+    if (throttledSliderPrice == null || !isFinite(throttledSliderPrice)) return null;
     const ε = ceEpsilon;
     const P0 = (typeof cePrefP0 === 'number' && isFinite(cePrefP0) && cePrefP0 > 0)
       ? cePrefP0
@@ -642,22 +686,22 @@ export default function OzonPage() {
       rub_per_cny: rubPerCny,
       fx_include_intl: fxIncludeIntl,
     } as OzonPricingParams;
-    const br = computeProfitForPrice(sliderPrice, g, r.pricing, params);
+    const br = computeProfitForPrice(throttledSliderPrice, g, r.pricing, params);
     const LOG_K = Math.log(9);
     const q = (demandModel === 'ce')
-      ? Math.pow(sliderPrice / P0, -ε)
-      : (()=>{
+      ? Math.pow(throttledSliderPrice / P0, -ε)
+      : (() => {
           const p10d = chartSets.globalMin + 0.1 * Math.max(0, chartSets.globalMax - chartSets.globalMin);
           const p90d = chartSets.globalMin + 0.9 * Math.max(0, chartSets.globalMax - chartSets.globalMin);
           const p10 = (typeof logisticP10 === 'number' && isFinite(logisticP10)) ? logisticP10 : p10d;
           const p90 = (typeof logisticP90 === 'number' && isFinite(logisticP90)) ? logisticP90 : p90d;
           const k = (2*LOG_K) / Math.max(1e-6, p90 - p10);
           const pmid = (p10 + p90) / 2;
-          return 1 / (1 + Math.exp(k * (sliderPrice - pmid)));
+          return 1 / (1 + Math.exp(k * (throttledSliderPrice - pmid)));
         })();
     const pi = Math.max(0, br.profit_cny * q);
     return { q_norm: q, pi_norm_cny: pi };
-  }, [demandModel, sliderPrice, chartSets.globalMin, chartSets.globalMax, groupAtSliderPrice, rates, chartTriple.carrier, chartTriple.tier, chartTriple.delivery, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl, ceEpsilon, cePrefP0, logisticP10, logisticP90]);
+  }, [demandModel, throttledSliderPrice, chartSets.globalMin, chartSets.globalMax, groupAtSliderPrice, rates, chartTriple.carrier, chartTriple.tier, chartTriple.delivery, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl, ceEpsilon, cePrefP0, logisticP10, logisticP90]);
 
   // 总利润推荐价（π 最大）：基于当前承运商三元组，在全局区间按段采样求最大值
   const recommendPriceCE = useMemo<number | null>(() => {
@@ -808,6 +852,7 @@ export default function OzonPage() {
   }, [sliderPrice, rateAtSliderPrice?.carrier, rateAtSliderPrice?.tier, rateAtSliderPrice?.delivery, groupAtSliderPrice, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl]);
 
   // 尺寸超限检测：当“售价+重量”确定组后，若当前尺寸超过该组限制，则弹窗提示
+  // 优化：不随 sliderPrice 每次变化触发，仅在“组/尺寸/重量/规则”变化时检查；售价仅用于提示文案
   useEffect(() => {
     if (!activeRuleAtSlider?.dimsLimit) return;
     const { sum_cm_max, longest_cm_max } = activeRuleAtSlider.dimsLimit;
@@ -819,14 +864,25 @@ export default function OzonPage() {
     // 清除上一个定时器
     if (dimsOverTimerRef.current) { clearTimeout(dimsOverTimerRef.current); dimsOverTimerRef.current = null; }
     if (over && lastDimsKeyRef.current !== key) {
-      setDimsInfo({ group: groupAtSliderPrice, rule: activeRuleAtSlider, dims: { l, w, h }, sum: Math.round(sum*100)/100, longest: Math.round(longest*100)/100, price: sliderPrice ?? 0, weightG });
+      setDimsInfo({ group: groupAtSliderPrice, rule: activeRuleAtSlider, dims: { l, w, h }, sum: Math.round(sum*100)/100, longest: Math.round(longest*100)/100, price: dimsPriceRef.current ?? 0, weightG });
       // 延迟3秒再弹框，避免用户输入过程频繁打断
       dimsOverTimerRef.current = window.setTimeout(() => {
         setDimsOpen(true);
         lastDimsKeyRef.current = key;
       }, 3000);
     }
-  }, [sliderPrice, groupAtSliderPrice, dims.l, dims.w, dims.h, weightG, activeRuleAtSlider?.dimsLimit?.sum_cm_max, activeRuleAtSlider?.dimsLimit?.longest_cm_max]);
+  }, [groupAtSliderPrice, dims.l, dims.w, dims.h, weightG, activeRuleAtSlider?.dimsLimit?.sum_cm_max, activeRuleAtSlider?.dimsLimit?.longest_cm_max]);
+
+  // 空闲预热 Worker，降低首次计算延迟
+  useEffect(() => {
+    const run = () => { try { prewarmWorker(); } catch {} };
+    if (typeof (window as any).requestIdleCallback === 'function') {
+      (window as any).requestIdleCallback(run);
+    } else {
+      const t = setTimeout(run, 800);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   // 当前滑块对应的“即时详情”（不需要点击应用）
   const currentItem = useMemo(() => {
@@ -854,6 +910,7 @@ export default function OzonPage() {
       constraint_ok: true,
       eta_days: rateAtSliderPrice.eta_days,
       battery_allowed: rateAtSliderPrice.battery_allowed,
+      pricing: rateAtSliderPrice.pricing,
     };
     return item;
   }, [sliderPrice, rateAtSliderPrice?.carrier, rateAtSliderPrice?.tier, rateAtSliderPrice?.delivery, groupAtSliderPrice, weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, lastmileRate, lastmileMin, lastmileMax, rubPerCny, fxIncludeIntl]);
@@ -975,6 +1032,7 @@ export default function OzonPage() {
             delivery={chartDelivery}
             setDelivery={setChartDelivery}
             feasibleGroups={feasibleGroupsByWeightPrice}
+            activeRule={activeRuleAtSlider}
           />
         </div>
       </section>
@@ -998,6 +1056,7 @@ export default function OzonPage() {
           demandModel={demandModel}
           setDemandModel={setDemandModel}
           extraLines={extraLines}
+          extraLinesLoading={extraLinesLoading}
           legendExtras={[
             { label: "单件利润率（各组）", color: "#334155" },
             ...(extraLines ? [
@@ -1034,7 +1093,18 @@ export default function OzonPage() {
       ) : null}
       {/* 结果区：整屏宽度 */}
       <section className="space-y-4">
-        <ResultSummary currentItem={currentItem} best={best} maxMargin={maxMargin} rubPerCny={rubPerCny} loadingBest={!allRatesReady} />
+        <ResultSummary
+          currentItem={currentItem}
+          best={best}
+          maxMargin={maxMargin}
+          rubPerCny={rubPerCny}
+          costCny={costCny}
+          commission={commission}
+          acquiring={acquiring}
+          fx={fx}
+          last_mile={{ rate: lastmileRate, min_rub: lastmileMin, max_rub: lastmileMax }}
+          loadingBest={!allRatesReady}
+        />
 
         {!listExpanded ? (
           <div className="flex justify-center">
@@ -1128,7 +1198,17 @@ export default function OzonPage() {
       </Dialog>
 
       {/* 方案详情弹框 */}
-      <DetailsDialog open={detailsOpen} onOpenChange={(v)=>{ setDetailsOpen(v); if(!v) setDetailsItem(null); }} item={detailsItem} />
+      <DetailsDialog
+        open={detailsOpen}
+        onOpenChange={(v)=>{ setDetailsOpen(v); if(!v) setDetailsItem(null); }}
+        item={detailsItem}
+        rubPerCny={rubPerCny}
+        costCny={costCny}
+        commission={commission}
+        acquiring={acquiring}
+        fx={fx}
+        last_mile={{ rate: lastmileRate, min_rub: lastmileMin, max_rub: lastmileMax }}
+      />
       {/* 尺寸限制提示弹窗 */}
       <DimsLimitDialog open={dimsOpen} onOpenChange={setDimsOpen} info={dimsInfo} />
     </div>

@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { carrierName } from "@/lib/carrier_names";
 import { getCarrierDetailsUrl } from "@/lib/ozon_data_meta";
-import type { DeliveryMode, OzonGroup } from "@/types/ozon";
+import type { DeliveryMode, OzonGroup, OzonGroupRule } from "@/types/ozon";
 
 export default function LogisticsFilterCard({
   carriers,
@@ -17,6 +17,7 @@ export default function LogisticsFilterCard({
   delivery,
   setDelivery,
   feasibleGroups,
+  activeRule,
 }: {
   carriers: string[];
   tiers: string[];
@@ -27,6 +28,7 @@ export default function LogisticsFilterCard({
   delivery: DeliveryMode | "";
   setDelivery: (v: DeliveryMode | "") => void;
   feasibleGroups: OzonGroup[];
+  activeRule?: OzonGroupRule | null;
 }) {
   const ALL = "__ALL__";
   return (
@@ -87,7 +89,14 @@ export default function LogisticsFilterCard({
             </Select>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground mt-2">当前重量及价格适用以下Ozon货件分组：{feasibleGroups.join("、") || "无"}</p>
+        <p className="text-xs text-muted-foreground mt-2">
+          当前重量及价格适用以下Ozon货件分组：{feasibleGroups.join("、") || "无"}
+        </p>
+        {activeRule ? (
+          <p className="text-[11px] text-muted-foreground mt-1">
+            当前组限制：价格 ₽ {activeRule.priceRub.min} ~ ₽ {activeRule.priceRub.max}；重量 {activeRule.weightG.min} ~ {activeRule.weightG.max} g
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );

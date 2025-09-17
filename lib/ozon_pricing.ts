@@ -394,6 +394,7 @@ export function bestPricing(
           tier: rate.tier,
           delivery: rate.delivery,
           breakdown,
+          pricing: rate.pricing,
           safe_range: { from: Math.max(rule.priceRub.min, P - δ), to: P },
           eta_days: rate.eta_days,
           battery_allowed: rate.battery_allowed,

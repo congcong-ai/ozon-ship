@@ -110,4 +110,6 @@ export type ResultItem = {
   // 便于前端展示而无需再次加载完整费率表
   eta_days?: string;
   battery_allowed?: boolean;
+  // （可选）携带计价参数，便于前端展示公式
+  pricing?: LinearWeightPricingCNY;
 };

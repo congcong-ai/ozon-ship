@@ -41,6 +41,7 @@ export default function PriceChartCard({
   logisticP90,
   setLogisticP90,
   onOpenSettings,
+  extraLinesLoading = false,
 }: {
   title?: string;
   chart: PriceChartSets;
@@ -88,6 +89,7 @@ export default function PriceChartCard({
   logisticP90?: number | null;
   setLogisticP90?: (v: number | null) => void;
   onOpenSettings: () => void;
+  extraLinesLoading?: boolean;
 }) {
   const yMin = typeof minMargin === 'number' ? minMargin : 0.1;
   const yMax = typeof maxMargin === 'number' && maxMargin > 0 ? maxMargin : yMin + 1;
@@ -189,6 +191,12 @@ export default function PriceChartCard({
             showDominated={demandModel === 'none'}
             hideLegend
           />
+          {extraLinesLoading ? (
+            <div className="pointer-events-none absolute top-2 right-2 text-xs text-slate-600 bg-white/80 backdrop-blur rounded px-2 py-1 border shadow-sm flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-full bg-slate-400 animate-pulse" />
+              <span>销量/总利润 计算中…</span>
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

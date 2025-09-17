@@ -36,7 +36,7 @@ export default function CarrierList({ items, rubPerCny, onOpenDetails }: { items
                 const m = findMeta(it);
                 const eta = m?.eta_days || "-";
                 return <>
-                  <span>时效：{eta}</span>
+                  <span>时效：{eta}天</span>
                   {batteryBadge(m?.battery_allowed)}
                 </>;
               })()}

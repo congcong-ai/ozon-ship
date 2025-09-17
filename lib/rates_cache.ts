@@ -3,7 +3,7 @@ import { CARRIER_IMPORTERS, ALL_CARRIERS } from '@/lib/ozon_pricing';
 
 type CarrierKey = (typeof ALL_CARRIERS)[number];
 
-const CACHE_NAME = 'ozon-rates-v1';
+const CACHE_NAME = 'ozon-rates-v2';
 
 function getBuildId(): string {
   try {
@@ -14,7 +14,20 @@ function getBuildId(): string {
   }
 }
 
-function lsKey(carrier: string) { return `ozon:rates:${getBuildId()}:${carrier}`; }
+function getCarrierVersionLS(carrier: string): string | null {
+  try { return localStorage.getItem(`ozon:rates:ver:${String(carrier).toLowerCase()}`); } catch { return null; }
+}
+function setCarrierVersionLS(carrier: string, ver: string) {
+  try { localStorage.setItem(`ozon:rates:ver:${String(carrier).toLowerCase()}`, ver); } catch {}
+}
+
+function versionTagFor(carrier: string): string {
+  // 同时包含构建ID与数据日期（来自动态 import 后的记录），细化缓存失效策略
+  const v = getCarrierVersionLS(carrier) || 'unknown';
+  return `${getBuildId()}::${v}`;
+}
+
+function lsKey(carrier: string) { return `ozon:rates:${carrier}:${versionTagFor(carrier)}`; }
 function cacheRequestFor(key: string): Request {
   // Use a same-origin pseudo path to store cache entries
   const url = `/__ozon_cache__/${encodeURIComponent(key)}`;
@@ -72,6 +85,9 @@ export async function loadCarrierRatesCached(carrier: CarrierKey): Promise<OzonR
   const mod: any = await importer();
   const src: any = mod?.default ?? mod;
   const arr: OzonRateTable[] = Array.isArray(src?.rates) ? (src.rates as OzonRateTable[]) : [];
+  // 记录该承运商的数据日期作为版本信息（不引入静态 meta 模块）
+  const dataDate: string = typeof src?.data_date === 'string' && src.data_date.length ? src.data_date : 'unknown';
+  setCarrierVersionLS(carrier, dataDate);
   // Save to cache for next sessions
   await putCarrierToCache(carrier, arr);
   return arr;
