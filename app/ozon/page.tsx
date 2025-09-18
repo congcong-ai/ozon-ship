@@ -1104,6 +1104,7 @@ export default function OzonPage() {
           fx={fx}
           last_mile={{ rate: lastmileRate, min_rub: lastmileMin, max_rub: lastmileMax }}
           loadingBest={!allRatesReady}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
 
         {!listExpanded ? (
@@ -1208,6 +1209,7 @@ export default function OzonPage() {
         acquiring={acquiring}
         fx={fx}
         last_mile={{ rate: lastmileRate, min_rub: lastmileMin, max_rub: lastmileMax }}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
       {/* 尺寸限制提示弹窗 */}
       <DimsLimitDialog open={dimsOpen} onOpenChange={setDimsOpen} info={dimsInfo} />

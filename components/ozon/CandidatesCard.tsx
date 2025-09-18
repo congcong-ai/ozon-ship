@@ -101,9 +101,9 @@ export default function CandidatesCard({
                 </th>
                 <th className="py-1 pr-2">组</th>
                 <th className="py-1 pr-2">平台佣金 ₽</th>
-                <th className="py-1 pr-2">收单费 ₽</th>
+                <th className="py-1 pr-2">银行收单费 ₽</th>
                 <th className="py-1 pr-2">国际物流费 ₽</th>
-                <th className="py-1 pr-2">尾城费 ₽</th>
+                <th className="py-1 pr-2">尾城配送费 ₽</th>
                 <th className="py-1 pr-2">货币转换费 ₽</th>
                 <th className="py-1 pr-2">
                   <button onClick={() => onToggleSort("receipt")} className="underline-offset-2 hover:underline">

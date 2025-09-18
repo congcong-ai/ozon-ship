@@ -49,32 +49,32 @@ export default function SettingsDialog({
               </div>
             </div>
             <div>
-              <Label htmlFor="fee-acq">收单费(β)</Label>
+              <Label htmlFor="fee-acq">银行收单费(β)</Label>
               <div className="relative">
                 <Input id="fee-acq" type="number" step="0.01" className="pr-8" value={Math.round(acquiring*10000)/100} onChange={(e)=>setAcquiring((Number(e.target.value)||0)/100)} />
                 <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
               </div>
             </div>
             <div>
-              <Label htmlFor="fee-fx">转换费(γ)</Label>
+              <Label htmlFor="fee-fx">货币转换费(γ)</Label>
               <div className="relative">
                 <Input id="fee-fx" type="number" step="0.01" className="pr-8" value={Math.round(fx*10000)/100} onChange={(e)=>setFx((Number(e.target.value)||0)/100)} />
                 <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
               </div>
             </div>
             <div>
-              <Label htmlFor="lm-rate">尾城比例(η)</Label>
+              <Label htmlFor="lm-rate">尾城配送费比例(η)</Label>
               <div className="relative">
                 <Input id="lm-rate" type="number" step="0.01" className="pr-8" value={Math.round(lastmileRate*10000)/100} onChange={(e)=>setLastmileRate((Number(e.target.value)||0)/100)} />
                 <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
               </div>
             </div>
             <div>
-              <Label htmlFor="lm-min">尾城Min</Label>
+              <Label htmlFor="lm-min">尾城配送费 Min（RUB）</Label>
               <Input id="lm-min" type="number" value={lastmileMin} onChange={(e)=>setLastmileMin(Number(e.target.value)||0)} />
             </div>
             <div>
-              <Label htmlFor="lm-max">尾城Max</Label>
+              <Label htmlFor="lm-max">尾城配送费 Max（RUB）</Label>
               <Input id="lm-max" type="number" value={lastmileMax} onChange={(e)=>setLastmileMax(Number(e.target.value)||0)} />
             </div>
           </div>
