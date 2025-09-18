@@ -13,6 +13,7 @@
       "mode": "air",
       "weight": { "min_g": 1, "max_g": 500, "increment_g": 1 },
       "dimensions_max": "三边之和≤90cm，最长边≤60cm",
+      "dims_limit": { "sum_cm_max": 90, "longest_cm_max": 60 },
       "value_limit": { "currency": "RUB", "amount": 1500 },
       "prohibited": ["含电池产品", "液体及易燃物（清漆、烟雾剂、打火机等）"],
       "compensation": "丢失或损坏不赔偿",
@@ -30,6 +31,7 @@
       "mode": "land",
       "weight": { "min_g": 1, "max_g": 500, "increment_g": 1 },
       "dimensions_max": "三边之和≤90cm，最长边≤60cm",
+      "dims_limit": { "sum_cm_max": 90, "longest_cm_max": 60 },
       "value_limit": { "currency": "RUB", "amount": 1500 },
       "prohibited": ["含电池产品", "液体及易燃物（清漆、烟雾剂、打火机等）"],
       "compensation": "丢失或损坏不赔偿",
@@ -47,6 +49,7 @@
       "weight": { "min_g": 1, "max_g": 5000, "increment_g": 1 },
       "dimensions_max": "长+宽+厚≤90cm，最长边≤60cm；圆卷：2×直径+长≤104cm，长≤90cm",
       "dimensions_min": "长度≥14cm、宽度≥11cm；圆卷：2×直径+长≥17cm，长≥11cm",
+      "dims_limit": { "sum_cm_max": 90, "longest_cm_max": 60 },
       "pricing": {
         "type": "registration_plus_per_gram",
         "registration_fee_cny": 12,
@@ -61,6 +64,7 @@
       "weight": { "min_g": 1, "max_g": 5000, "increment_g": 1 },
       "dimensions_max": "长+宽+厚≤90cm，最长边≤60cm；圆卷：2×直径+长≤104cm，长≤90cm",
       "dimensions_min": "长度≥14cm、宽度≥11cm；圆卷：2×直径+长≥17cm，长≥11cm",
+      "dims_limit": { "sum_cm_max": 90, "longest_cm_max": 60 },
       "pricing": {
         "type": "registration_plus_per_gram",
         "registration_fee_cny": 12,
@@ -75,6 +79,7 @@
       "weight": { "min_g": 1, "max_g": 5000, "increment_g": 1 },
       "dimensions_max": "长+宽+厚≤90cm，最长边≤60cm；圆卷：2×直径+长≤104cm，长≤90cm",
       "dimensions_min": "长度≥14cm、宽度≥11cm；圆卷：2×直径+长≥17cm，长≥11cm",
+      "dims_limit": { "sum_cm_max": 90, "longest_cm_max": 60 },
       "pricing": {
         "type": "registration_plus_per_gram",
         "registration_fee_cny": 12,
@@ -88,6 +93,7 @@
       "name": "China Post e包裹特惠",
       "weight": { "min_g": 500, "max_g": 31000, "increment_g": 500 },
       "dimensions_max": "长+宽+高<200cm，最长边<105cm",
+      "dims_limit": { "sum_cm_max": 200, "longest_cm_max": 105 },
       "pricing": {
         "type": "first_weight_plus_additional",
         "first_weight_g": 500,
@@ -108,6 +114,13 @@
         "标准3：任一边≤1.05m，两个最大边之和≤2.5m",
         "标准4：任一边≤1.05m，两个最大边之和≤3m",
         "标准5：任一边≤1.52m，两个最大边之和≤2.74m"
+      ],
+      "dims_options": [
+        { "any_side_max_cm": 150, "two_largest_sum_max_cm": 300 },
+        { "any_side_max_cm": 105, "two_largest_sum_max_cm": 200 },
+        { "any_side_max_cm": 105, "two_largest_sum_max_cm": 250 },
+        { "any_side_max_cm": 105, "two_largest_sum_max_cm": 300 },
+        { "any_side_max_cm": 152, "two_largest_sum_max_cm": 274 }
       ],
       "dimensional_weight_rule": {
         "applies_when": "任一边≥40cm",
@@ -134,6 +147,7 @@
       "weight": { "min_g": 1, "max_g": 2000, "increment_g": 1 },
       "dimensions_max": "长+宽+厚≤90cm，最长边≤60cm；圆卷：2×直径+长≤104cm，长≤90cm",
       "dimensions_min": "长度≥14cm、宽度≥11cm；圆卷：2×直径+长≥17cm，长≥11cm",
+      "dims_limit": { "sum_cm_max": 90, "longest_cm_max": 60 },
       "value_limit": { "currency": "USD", "amount": 10 },
       "pricing": {
         "type": "base_plus_per_gram",
