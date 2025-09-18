@@ -69,6 +69,8 @@ export default function PriceControlsBar({
   const [logP10Input, setLogP10Input] = React.useState<string>(() => (logisticP10 == null ? "" : String(logisticP10)));
   const [logP90Input, setLogP90Input] = React.useState<string>(() => (logisticP90 == null ? "" : String(logisticP90)));
   const [moreOpen, setMoreOpen] = React.useState<boolean>(false);
+  const [helpCEOpen, setHelpCEOpen] = React.useState<boolean>(false);
+  const [helpLOGOpen, setHelpLOGOpen] = React.useState<boolean>(false);
   React.useEffect(() => { setEpsInput(Number.isFinite(ceEpsilon as number) ? String(ceEpsilon) : ""); }, [ceEpsilon]);
   React.useEffect(() => { setP0Input(cePrefP0 == null ? "" : String(cePrefP0)); }, [cePrefP0]);
   React.useEffect(() => { setLogP10Input(logisticP10 == null ? "" : String(logisticP10)); }, [logisticP10]);
@@ -137,19 +139,34 @@ export default function PriceControlsBar({
             }}
           />
           {sliderBreakdown && (
-            <div className="ml-2 text-sm">
-              <div>
-                利润率：{(sliderBreakdown.margin*100).toFixed(2)}% · 利润：₽ {(sliderBreakdown.profit_cny * rubPerCny).toFixed(2)} / ¥ {sliderBreakdown.profit_cny.toFixed(2)}
-              </div>
-              {demandModel !== 'none' && demandStats ? (
+            <>
+              {/* 桌面版：原有多行文本展示 */}
+              <div className="ml-2 text-sm hidden sm:block">
                 <div>
+                  利润率：{(sliderBreakdown.margin*100).toFixed(2)}% · 利润：₽ {(sliderBreakdown.profit_cny * rubPerCny).toFixed(2)} / ¥ {sliderBreakdown.profit_cny.toFixed(2)}
+                </div>
+                {demandModel !== 'none' && demandStats ? (
+                  <div>
+                    销量（相对）：{demandStats.q_norm.toFixed(3)} · 总利润（相对，¥）：{demandStats.pi_norm_cny.toFixed(2)}
+                  </div>
+                ) : null}
+                <div>
+                  货件分组：{activeGroup} · 国际物流费（{carrierName(chartTriple.carrier)} / {chartTriple.tier} / {deliveryZh(chartTriple.delivery)}）：₽ {sliderBreakdown.intl_logistics_rub.toFixed(2)}
+                </div>
+              </div>
+              {/* 移动版：四行列表展示 */}
+              <ul className="ml-2 text-sm list-disc list-inside space-y-0.5 sm:hidden">
+                <li>利润率：{(sliderBreakdown.margin*100).toFixed(2)}%</li>
+                <li>利润：₽ {(sliderBreakdown.profit_cny * rubPerCny).toFixed(2)} / ¥ {sliderBreakdown.profit_cny.toFixed(2)}</li>
+                <li>货件分组：{activeGroup}</li>
+                <li>国际物流费（{carrierName(chartTriple.carrier)} / {chartTriple.tier} / {deliveryZh(chartTriple.delivery)}）：₽ {sliderBreakdown.intl_logistics_rub.toFixed(2)}</li>
+              </ul>
+              {demandModel !== 'none' && demandStats ? (
+                <div className="ml-2 text-xs text-slate-600 sm:hidden mt-1">
                   销量（相对）：{demandStats.q_norm.toFixed(3)} · 总利润（相对，¥）：{demandStats.pi_norm_cny.toFixed(2)}
                 </div>
               ) : null}
-              <div>
-                货件分组：{activeGroup} · 国际物流费（{carrierName(chartTriple.carrier)} / {chartTriple.tier} / {deliveryZh(chartTriple.delivery)}）：₽ {sliderBreakdown.intl_logistics_rub.toFixed(2)}
-              </div>
-            </div>
+            </>
           )}
         </div>
         {dangerMessage && demandModel === 'none' && (
@@ -161,51 +178,111 @@ export default function PriceControlsBar({
         <div className="w-full mt-2">
           <div className="rounded-md border border-accent/40 bg-accent/20 px-3 py-2">
             <div className="flex flex-col gap-2 text-[12px] text-slate-700">
-              <div className="inline-flex items-center gap-3 flex-wrap">
+              {/* 桌面版：横排布局 */}
+              <div className="hidden sm:inline-flex items-center gap-3 flex-wrap">
                 <span className="text-slate-600">结合销量，预测总利润：</span>
 
-                <div className="inline-flex items-center gap-1 select-none">
+                <div className="inline-flex items-center gap-2 select-none">
                   <input type="checkbox" checked={demandModel === 'ce'} onChange={()=> toggleModel('ce')} />
-                  
-                  <span>模型1：常数弹性</span>
-                  <span className="relative inline-flex items-center group" tabIndex={0}>
-                    <HelpCircle className="h-4 w-4 text-slate-500 cursor-help" />
-                  <div className="absolute z-30 hidden group-hover:block group-focus-within:block left-0 top-5 w-[280px] rounded-md border bg-white p-2 shadow-md text-[12px] leading-5">
-                    <div className="font-medium mb-1">常数弹性模型（Constant Elasticity）</div>
-                    <div>假设销量 q(P) 与价格 P 满足 q(P) = (P / P0)^(-ε)，其中 ε &gt; 0。</div>
-                    <div className="mt-1">直观解释：当 ε = 1.8 时，价格提高 10%，销量大约下降 18%；反之降价 10%，销量约上升 18%。</div>
-                    <div className="mt-1">参数设置：
-                      <br/>• ε（弹性）：反映价格变化对销量的敏感度，建议 1.0~3.0；
-                      <br/>• P0（参考价）：决定曲线在价格轴上的“基准位置”。默认取当前区间中值，便于在缺少历史数据时取得稳健推断。
-                    </div>
-                    <div className="mt-1">关于 P0：
-                      <br/>• 若有历史成交价数据，建议取“历史成交的中位价/稳定价位”；
-                      <br/>• 若为新品无历史，可用“区间中值”或“同品类主流价格”作为初始；
-                      <br/>• 调大 P0 会让曲线整体“右移”（同一售价对应更高相对销量预期），调小 P0 相反。
-                    </div>
-                    <div className="text-slate-500 mt-1">适用性：对“价格-销量”关系近似满足幂律的品类较可靠；对强促销/库存约束/上新等场景仅作粗略参考。</div>
-                  </div>
-                </span>
+                  <span className="shrink-0 inline-flex items-center gap-1">
+                    <span className="whitespace-nowrap">模型1：常数弹性</span>
+                    <span className="relative inline-flex items-center group" tabIndex={0} onClick={()=> setHelpCEOpen(true)}>
+                      <HelpCircle className="h-4 w-4 text-slate-500 cursor-help" />
+                      <div className="absolute z-40 hidden sm:group-hover:block sm:group-focus-within:block top-6 left-0 sm:left-0 sm:right-auto w-[280px] rounded-md border bg-white p-3 shadow-md text-[12px] leading-5">
+                      <div className="font-medium mb-1">常数弹性模型（Constant Elasticity）</div>
+                      <div>假设销量 q(P) 与价格 P 满足 q(P) = (P / P0)^(-ε)，其中 ε &gt; 0。</div>
+                      <div className="mt-1">直观解释：当 ε = 1.8 时，价格提高 10%，销量大约下降 18%；反之降价 10%，销量约上升 18%。</div>
+                      <div className="mt-1">参数设置：
+                        <br/>• ε（弹性）：反映价格变化对销量的敏感度，建议 1.0~3.0；
+                        <br/>• P0（参考价）：决定曲线在价格轴上的“基准位置”。默认取当前区间中值，便于在缺少历史数据时取得稳健推断。
+                      </div>
+                      <div className="mt-1">关于 P0：
+                        <br/>• 若有历史成交价数据，建议取“历史成交的中位价/稳定价位”；
+                        <br/>• 若为新品无历史，可用“区间中值”或“同品类主流价格”作为初始；
+                        <br/>• 调大 P0 会让曲线整体“右移”（同一售价对应更高相对销量预期），调小 P0 相反。
+                      </div>
+                      <div className="text-slate-500 mt-1">适用性：对“价格-销量”关系近似满足幂律的品类较可靠；对强促销/库存约束/上新等场景仅作粗略参考。</div>
+                      </div>
+                    </span>
+                  </span>
                 </div>
-                <div className="inline-flex items-center gap-1 select-none">
+
+                <div className="inline-flex items-center gap-2 select-none">
                   <input type="checkbox" checked={demandModel === 'logistic'} onChange={()=> toggleModel('logistic')} />
-                  <span>模型2：逻辑斯蒂</span>
-                  <span className="relative inline-flex items-center group" tabIndex={0}>
-                    <HelpCircle className="h-4 w-4 text-slate-500 cursor-help" />
-                  <div className="absolute z-30 hidden group-hover:block group-focus-within:block left-0 top-5 w-[280px] rounded-md border bg-white p-2 shadow-md text-[12px] leading-5">
-                    <div className="font-medium mb-1">逻辑斯蒂模型（Logistic）</div>
-                    <div>假设销量 q(P) = 1 / (1 + exp(k · (P - Pmid)))，呈 S 型：低价销量接近上限，高价销量接近 0。</div>
-                    <div className="mt-1">本页估计方式：使用全局价格区间的 10% 与 90% 两点来确定斜率 k 与中位 Pmid，确保曲线连续平滑（避免分段跳变）。</div>
-                    <div className="mt-1">举例：若区间为 1000~2000，则 P10≈1100、P90≈1900，中位约 1500，P 上升越过 1500 后销量下降加速。</div>
-                    <div className="mt-1">可调参数（可选）：
-                      <br/>• P10 / P90：销量从高位向低位过渡的 10% 与 90% 位置，用于确定斜率与中位点（留空则用系统默认）。
-                    </div>
-                    <div className="text-slate-500 mt-1">适用性：对“低价饱和—中段拐点—高价流量稀薄”的品类较可靠；若强活动/曝光不随价变时，参考意义降低。</div>
-                  </div>
-                </span>
+                  <span className="shrink-0 inline-flex items-center gap-1">
+                    <span className="whitespace-nowrap">模型2：逻辑斯蒂</span>
+                    <span className="relative inline-flex items-center group" tabIndex={0} onClick={()=> setHelpLOGOpen(true)}>
+                      <HelpCircle className="h-4 w-4 text-slate-500 cursor-help" />
+                      <div className="absolute z-40 hidden sm:group-hover:block sm:group-focus-within:block top-6 left-0 sm:left-0 sm:right-auto w-[280px] rounded-md border bg-white p-3 shadow-md text-[12px] leading-5">
+                      <div className="font-medium mb-1">逻辑斯蒂模型（Logistic）</div>
+                      <div>假设销量 q(P) = 1 / (1 + exp(k · (P - Pmid)))，呈 S 型：低价销量接近上限，高价销量接近 0。</div>
+                      <div className="mt-1">本页估计方式：使用全局价格区间的 10% 与 90% 两点来确定斜率 k 与中位 Pmid，确保曲线连续平滑（避免分段跳变）。</div>
+                      <div className="mt-1">举例：若区间为 1000~2000，则 P10≈1100、P90≈1900，中位约 1500，P 上升越过 1500 后销量下降加速。</div>
+                      <div className="mt-1">可调参数（可选）：
+                        <br/>• P10 / P90：销量从高位向低位过渡的 10% 与 90% 位置，用于确定斜率与中位点（留空则用系统默认）。
+                      </div>
+                      <div className="text-slate-500 mt-1">适用性：对“低价饱和—中段拐点—高价流量稀薄”的品类较可靠；若强活动/曝光不随价变时，参考意义降低。</div>
+                      </div>
+                    </span>
+                  </span>
                 </div>
+
                 <button className="ml-1 text-[12px] text-slate-600 hover:underline" onClick={()=> setMoreOpen(true)}>更多模型</button>
               </div>
+
+              {/* 移动版：四行布局 */}
+              <div className="sm:hidden flex flex-col gap-2">
+                <span className="text-slate-600">结合销量，预测总利润：</span>
+                <div className="inline-flex items-center gap-2 select-none">
+                  <input type="checkbox" checked={demandModel === 'ce'} onChange={()=> toggleModel('ce')} />
+                  <span className="shrink-0 inline-flex items-center gap-1">
+                    <span className="whitespace-nowrap">模型1：常数弹性</span>
+                    <span className="relative inline-flex items-center group" tabIndex={0} onClick={()=> setHelpCEOpen(true)}>
+                      <HelpCircle className="h-4 w-4 text-slate-500 cursor-help" />
+                      <div className="absolute z-40 hidden sm:group-hover:block sm:group-focus-within:block top-6 left-0 w-[280px] rounded-md border bg-white p-3 shadow-md text-[12px] leading-5">
+                      <div className="font-medium mb-1">常数弹性模型（Constant Elasticity）</div>
+                      <div>假设销量 q(P) 与价格 P 满足 q(P) = (P / P0)^(-ε)，其中 ε &gt; 0。</div>
+                      <div className="mt-1">直观解释：当 ε = 1.8 时，价格提高 10%，销量大约下降 18%；反之降价 10%，销量约上升 18%。</div>
+                      <div className="mt-1">参数设置：
+                        <br/>• ε（弹性）：反映价格变化对销量的敏感度，建议 1.0~3.0；
+                        <br/>• P0（参考价）：决定曲线在价格轴上的“基准位置”。默认取当前区间中值，便于在缺少历史数据时取得稳健推断。
+                      </div>
+                      <div className="mt-1">关于 P0：
+                        <br/>• 若有历史成交价数据，建议取“历史成交的中位价/稳定价位”；
+                        <br/>• 若为新品无历史，可用“区间中值”或“同品类主流价格”作为初始；
+                        <br/>• 调大 P0 会让曲线整体“右移”（同一售价对应更高相对销量预期），调小 P0 相反。
+                      </div>
+                      <div className="text-slate-500 mt-1">适用性：对“价格-销量”关系近似满足幂律的品类较可靠；对强促销/库存约束/上新等场景仅作粗略参考。</div>
+                      </div>
+                    </span>
+                  </span>
+                </div>
+                {/* 第二行：模型2 */}
+                <div className="inline-flex items-center gap-2 select-none">
+                  <input type="checkbox" checked={demandModel === 'logistic'} onChange={()=> toggleModel('logistic')} />
+                  <span className="shrink-0 inline-flex items-center gap-1">
+                    <span className="whitespace-nowrap">模型2：逻辑斯蒂</span>
+                    <span className="relative inline-flex items-center group" tabIndex={0} onClick={()=> setHelpLOGOpen(true)}>
+                      <HelpCircle className="h-4 w-4 text-slate-500 cursor-help" />
+                      <div className="absolute z-40 hidden sm:group-hover:block sm:group-focus-within:block top-6 left-0 w-[280px] rounded-md border bg-white p-3 shadow-md text-[12px] leading-5">
+                      <div className="font-medium mb-1">逻辑斯蒂模型（Logistic）</div>
+                      <div>假设销量 q(P) = 1 / (1 + exp(k · (P - Pmid)))，呈 S 型：低价销量接近上限，高价销量接近 0。</div>
+                      <div className="mt-1">本页估计方式：使用全局价格区间的 10% 与 90% 两点来确定斜率 k 与中位 Pmid，确保曲线连续平滑（避免分段跳变）。</div>
+                      <div className="mt-1">举例：若区间为 1000~2000，则 P10≈1100、P90≈1900，中位约 1500，P 上升越过 1500 后销量下降加速。</div>
+                      <div className="mt-1">可调参数（可选）：
+                        <br/>• P10 / P90：销量从高位向低位过渡的 10% 与 90% 位置，用于确定斜率与中位点（留空则用系统默认）。
+                      </div>
+                      <div className="text-slate-500 mt-1">适用性：对“低价饱和—中段拐点—高价流量稀薄”的品类较可靠；若强活动/曝光不随价变时，参考意义降低。</div>
+                      </div>
+                    </span>
+                  </span>
+                </div>
+                {/* 第四行：更多模型 */}
+                <div>
+                  <button className="text-[12px] text-slate-600 hover:underline" onClick={()=> setMoreOpen(true)}>更多模型</button>
+                </div>
+              </div>
+
               {/* 模型1参数：仅在 CE 选中时显示 */}
               {demandModel === 'ce' && (
                 <div className="inline-flex flex-wrap items-center gap-3">
@@ -338,6 +415,52 @@ export default function PriceControlsBar({
           </div>
         </div>
       </div>
+      {/* 模型说明 Dialog（移动端） */}
+      <Dialog open={helpCEOpen} onOpenChange={setHelpCEOpen}>
+        <DialogContent className="sm:hidden max-w-[92vw]">
+          <DialogHeader>
+            <DialogTitle>常数弹性模型（Constant Elasticity）</DialogTitle>
+          </DialogHeader>
+          <div className="text-[13px] leading-6 text-slate-700">
+            假设销量 q(P) 与价格 P 满足 q(P) = (P / P0)^(-ε)，其中 ε &gt; 0。
+            <div className="mt-2">直观解释：当 ε = 1.8 时，价格提高 10%，销量大约下降 18%；反之降价 10%，销量约上升 18%。</div>
+            <div className="mt-2">参数设置：
+              <br/>• ε（弹性）：反映价格变化对销量的敏感度，建议 1.0~3.0；
+              <br/>• P0（参考价）：决定曲线在价格轴上的“基准位置”。默认取当前区间中值，便于在缺少历史数据时取得稳健推断。
+            </div>
+            <div className="mt-2">关于 P0：
+              <br/>• 若有历史成交价数据，建议取“历史成交的中位价/稳定价位”；
+              <br/>• 若为新品无历史，可用“区间中值”或“同品类主流价格”作为初始；
+              <br/>• 调大 P0 会让曲线整体“右移”（同一售价对应更高相对销量预期），调小 P0 相反。
+            </div>
+            <div className="text-slate-500 mt-2">适用性：对“价格-销量”关系近似满足幂律的品类较可靠；对强促销/库存约束/上新等场景仅作粗略参考。</div>
+          </div>
+          <div className="flex justify-end">
+            <Button size="sm" onClick={()=> setHelpCEOpen(false)}>好的</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={helpLOGOpen} onOpenChange={setHelpLOGOpen}>
+        <DialogContent className="sm:hidden max-w-[92vw]">
+          <DialogHeader>
+            <DialogTitle>逻辑斯蒂模型（Logistic）</DialogTitle>
+          </DialogHeader>
+          <div className="text-[13px] leading-6 text-slate-700">
+            假设销量 q(P) = 1 / (1 + exp(k · (P - Pmid)))，呈 S 型：低价销量接近上限，高价销量接近 0。
+            <div className="mt-2">本页估计方式：使用全局价格区间的 10% 与 90% 两点来确定斜率 k 与中位 Pmid，确保曲线连续平滑（避免分段跳变）。</div>
+            <div className="mt-2">举例：若区间为 1000~2000，则 P10≈1100、P90≈1900，中位约 1500，P 上升越过 1500 后销量下降加速。</div>
+            <div className="mt-2">可调参数（可选）：
+              <br/>• P10 / P90：销量从高位向低位过渡的 10% 与 90% 位置，用于确定斜率与中位点（留空则用系统默认）。
+            </div>
+            <div className="text-slate-500 mt-2">适用性：对“低价饱和—中段拐点—高价流量稀薄”的品类较可靠；若强活动/曝光不随价变时，参考意义降低。</div>
+          </div>
+          <div className="flex justify-end">
+            <Button size="sm" onClick={()=> setHelpLOGOpen(false)}>好的</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* 更多模型 Dialog */}
       <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
         <DialogContent>
