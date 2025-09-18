@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,11 @@ export default function CPProductParamsCard({
   dims: { l: number; w: number; h: number };
   setDims: (d: { l: number; w: number; h: number }) => void;
 }) {
+  // 本地字符串状态：允许输入框暂时为空，不会被 0 回填
+  const [lStr, setLStr] = useState<string>(String(dims.l ?? ""));
+  const [wStr, setWStr] = useState<string>(String(dims.w ?? ""));
+  const [hStr, setHStr] = useState<string>(String(dims.h ?? ""));
+
   return (
     <Card className="rounded-lg border p-4">
       <h2 className="mb-3 font-medium">商品参数</h2>
@@ -46,14 +52,45 @@ export default function CPProductParamsCard({
         <div>
           <Label className="mb-2 block">尺寸 (cm)</Label>
           <div className="grid grid-cols-3 gap-2">
-            <Input type="number" value={dims.l} onChange={(e)=> setDims({ ...dims, l: Number(e.target.value)||0 })} placeholder="L" />
-            <Input type="number" value={dims.w} onChange={(e)=> setDims({ ...dims, w: Number(e.target.value)||0 })} placeholder="W" />
-            <Input type="number" value={dims.h} onChange={(e)=> setDims({ ...dims, h: Number(e.target.value)||0 })} placeholder="H" />
+            <Input
+              type="number"
+              value={lStr}
+              onChange={(e)=> {
+                const v = e.target.value;
+                setLStr(v);
+                const n = parseFloat(v);
+                setDims({ ...dims, l: Number.isFinite(n) ? n : 0 });
+              }}
+              placeholder="L"
+            />
+            <Input
+              type="number"
+              value={wStr}
+              onChange={(e)=> {
+                const v = e.target.value;
+                setWStr(v);
+                const n = parseFloat(v);
+                setDims({ ...dims, w: Number.isFinite(n) ? n : 0 });
+              }}
+              placeholder="W"
+            />
+            <Input
+              type="number"
+              value={hStr}
+              onChange={(e)=> {
+                const v = e.target.value;
+                setHStr(v);
+                const n = parseFloat(v);
+                setDims({ ...dims, h: Number.isFinite(n) ? n : 0 });
+              }}
+              placeholder="H"
+            />
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">用于 e特快 体积重计算（当任一边 ≥ 40cm）。</p>
+          {/* 尺寸说明文案已删除 */}
         </div>
         {/* 属性已拆分为独立卡片 */}
       </div>
     </Card>
   );
 }
+

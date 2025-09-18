@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="min-h-[100dvh] antialiased" suppressHydrationWarning>
         <GlobalNotice />
         <TopNav />
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-[calc(env(safe-area-inset-bottom)+5rem)] sm:pb-0">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-[calc(env(safe-area-inset-bottom)+9.5rem)] sm:pb-0">
           {children}
         </div>
         <MobileTabBar />

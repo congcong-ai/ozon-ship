@@ -341,12 +341,24 @@ export default function OzonPage() {
     } catch {}
   }, [weightG, dims.l, dims.w, dims.h, costCny, commission, acquiring, fx, fxIncludeIntl, lastmileRate, lastmileMin, lastmileMax, minMargin, maxMargin, rubPerCny, rubFxMode, chartCarrier, chartTier, chartDelivery, listCarrier, listTier, listDelivery, weightUnit, sliderPrice, query, groupMode, demandModel, ceEpsilon, cePrefP0, logisticP10, logisticP90]);
 
-  // 汇率拉取：先尝试 exchangerate.host，失败回退 open.er-api.com
-  async function refreshFx() {
+  // 汇率拉取核心：先尝试 exchangerate.host，失败回退 open.er-api.com
+  async function refreshFxWithSource(source: 'auto' | 'manual') {
+    // 每日仅允许刷新 1 次（跨页面共享）
+    try {
+      const today = (()=>{ const d=new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; })();
+      const key = "rub_fx_last_refresh_date";
+      const last = localStorage.getItem(key);
+      if (last === today) {
+        if (source !== 'auto') {
+          alert("今日汇率已更新。为保证计算稳定，每日最多刷新 1 次。如需自定义汇率，请切换到手动模式输入。");
+        }
+        return;
+      }
+    } catch {}
     setFxError(null);
     setLoadingFx(true);
+    let ok = false;
     try {
-      let ok = false;
       // 1) exchangerate.host
       try {
         const res = await fetch("https://api.exchangerate.host/latest?base=CNY&symbols=RUB");
@@ -378,6 +390,11 @@ export default function OzonPage() {
       }
       if (!ok) {
         setFxError("汇率未更新，请稍后重试");
+      } else {
+        try {
+          const d=new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0');
+          localStorage.setItem("rub_fx_last_refresh_date", `${y}-${m}-${dd}`);
+        } catch {}
       }
     } catch (e) {
       setFxError("汇率刷新失败，请检查网络");
@@ -385,23 +402,25 @@ export default function OzonPage() {
       setLoadingFx(false);
     }
   }
+  // 提供给 FxToolbar 的“手动刷新”入口
+  async function refreshFx() { return refreshFxWithSource('manual'); }
 
   // 自动刷新：仅在自动模式下进行（rubFxMode 变化时触发一次）
   useEffect(() => {
-    if (rubFxMode === 'auto') refreshFx();
+    if (rubFxMode === 'auto') refreshFxWithSource('auto');
   }, [rubFxMode]);
 
   // 若本地无有效汇率，且处于自动模式，才触发一次刷新
   useEffect(() => {
     try {
       const raw = localStorage.getItem(LS_KEY);
-      if (!raw) { if (rubFxMode === 'auto') refreshFx(); return; }
+      if (!raw) { if (rubFxMode === 'auto') refreshFxWithSource('auto'); return; }
       const s = JSON.parse(raw || "{}");
       if ((typeof s?.rubPerCny !== 'number' || !isFinite(s.rubPerCny) || s.rubPerCny <= 0) && rubFxMode === 'auto') {
-        refreshFx();
+        refreshFxWithSource('auto');
       }
     } catch {
-      if (rubFxMode === 'auto') refreshFx();
+      if (rubFxMode === 'auto') refreshFxWithSource('auto');
     }
   }, [rubFxMode]);
 

@@ -71,6 +71,7 @@ export default function PriceControlsBar({
   const [moreOpen, setMoreOpen] = React.useState<boolean>(false);
   const [helpCEOpen, setHelpCEOpen] = React.useState<boolean>(false);
   const [helpLOGOpen, setHelpLOGOpen] = React.useState<boolean>(false);
+  const [priceCnyInput, setPriceCnyInput] = React.useState<string | null>(null);
   React.useEffect(() => { setEpsInput(Number.isFinite(ceEpsilon as number) ? String(ceEpsilon) : ""); }, [ceEpsilon]);
   React.useEffect(() => { setP0Input(cePrefP0 == null ? "" : String(cePrefP0)); }, [cePrefP0]);
   React.useEffect(() => { setLogP10Input(logisticP10 == null ? "" : String(logisticP10)); }, [logisticP10]);
@@ -84,6 +85,35 @@ export default function PriceControlsBar({
     if (!setDemandModel) return;
     if (demandModel === kind) setDemandModel('none');
     else setDemandModel(kind);
+  }
+  // 双输入框（₽/¥）显示与提交工具
+  const rubDisplay = priceInput ?? (typeof sliderPrice==='number' ? sliderPrice.toFixed(2) : "");
+  const rubNumber = Number(priceInput ?? (typeof sliderPrice==='number' ? sliderPrice : NaN));
+  const cnyDerived = (rubPerCny > 0 && isFinite(rubNumber)) ? (rubNumber / rubPerCny).toFixed(2) : "";
+  const cnyDisplay = priceCnyInput ?? cnyDerived;
+  function commitRubFromString(s: string) {
+    if (!sliderRange) return;
+    if (s.trim() === "") { setPriceInput(null); setPriceCnyInput(null); return; }
+    const v = Number(s);
+    const bad = Number.isNaN(v) || !isFinite(v);
+    if (bad) { setPriceInput(null); return; }
+    const vv = Math.round(v*100)/100;
+    const clamped = Math.min(sliderRange.max, Math.max(sliderRange.min, vv));
+    setSliderPrice(clamped);
+    setPriceInput(null);
+    setPriceCnyInput(null);
+  }
+  function commitCnyFromString(s: string) {
+    if (!sliderRange) return;
+    if (s.trim() === "") { setPriceCnyInput(null); setPriceInput(null); return; }
+    const c = Number(s);
+    const bad = Number.isNaN(c) || !isFinite(c) || !(rubPerCny > 0);
+    if (bad) { setPriceCnyInput(null); return; }
+    const rub = Math.round(c * rubPerCny * 100) / 100;
+    const clamped = Math.min(sliderRange.max, Math.max(sliderRange.min, rub));
+    setSliderPrice(clamped);
+    setPriceInput(null);
+    setPriceCnyInput(null);
   }
   const defaultP0 = (sliderRange.min + sliderRange.max) / 2;
   return (
@@ -108,40 +138,59 @@ export default function PriceControlsBar({
           />
         </div>
       </div>
-      <div className="mt-4 sm:mt-5 flex flex-wrap items-center gap-3 text-sm">
-        <div className="inline-flex items-center gap-2">
-          <span className={danger ? "text-red-600" : undefined}>售价：</span>
-          <Input
-            className={"h-8 w-28 " + (danger ? "border-red-500 text-red-600 focus-visible:ring-red-500" : "")}
-            type="number"
-            step="0.01"
-            value={priceInput ?? (typeof sliderPrice==='number' ? sliderPrice.toFixed(2) : "")}
-            onChange={(e)=>{ setPriceInput(e.target.value); }}
-            onKeyDown={(e)=>{
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                const v = Number(priceInput ?? (typeof sliderPrice==='number' ? sliderPrice : NaN));
-                setPriceInput(null);
-                if (Number.isNaN(v) || !isFinite(v) || !sliderRange) return;
-                const vv = Math.round(v*100)/100;
-                const clamped = Math.min(sliderRange.max, Math.max(sliderRange.min, vv));
-                setSliderPrice(clamped);
-              }
-            }}
-            onBlur={()=>{
-              if (priceInput === null) return;
-              const v = Number(priceInput);
-              setPriceInput(null);
-              if (Number.isNaN(v) || !isFinite(v) || !sliderRange) return;
-              const vv = Math.round(v*100)/100;
-              const clamped = Math.min(sliderRange.max, Math.max(sliderRange.min, vv));
-              setSliderPrice(clamped);
-            }}
-          />
+      <div className="mt-4 sm:mt-5 flex flex-col gap-3 text-sm">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+          {/* 左：售价输入区（更明显的卡片样式） */}
+          <div className={"rounded-md border bg-white shadow-sm p-3 sm:p-2 " + (danger ? "border-red-400" : "border-slate-200")}> 
+            <div className="text-[12px] text-slate-600 mb-1">售价</div>
+            <div className="flex items-center gap-2">
+              {/* ₽ 输入 */}
+              <div className="relative">
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500">₽</span>
+                <Input
+                  className={"h-8 w-28 pl-5 " + (danger ? "border-red-500 text-red-600 focus-visible:ring-red-500" : "")}
+                  type="number"
+                  step="0.01"
+                  value={rubDisplay}
+                  onChange={(e)=>{ setPriceInput(e.target.value); setPriceCnyInput(null); }}
+                  onKeyDown={(e)=>{
+                    if (e.key === 'Enter') { e.preventDefault(); commitRubFromString((e.target as HTMLInputElement).value); }
+                  }}
+                  onBlur={(e)=>{ commitRubFromString((e.target as HTMLInputElement).value); }}
+                />
+              </div>
+              <span className="text-slate-400">=</span>
+              {/* ¥ 输入 */}
+              <div className="relative">
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500">¥</span>
+                <Input
+                  className={"h-8 w-28 pl-5 " + (danger ? "border-red-500 text-red-600 focus-visible:ring-red-500" : "")}
+                  type="number"
+                  step="0.01"
+                  value={cnyDisplay}
+                  onChange={(e)=>{
+                    const val = e.target.value;
+                    setPriceCnyInput(val);
+                    const v = Number(val);
+                    if (!Number.isNaN(v) && isFinite(v) && rubPerCny > 0) {
+                      const rub = Math.round(v * rubPerCny * 100) / 100;
+                      setPriceInput(String(rub));
+                    }
+                  }}
+                  onKeyDown={(e)=>{
+                    if (e.key === 'Enter') { e.preventDefault(); commitCnyFromString((e.target as HTMLInputElement).value); }
+                  }}
+                  onBlur={(e)=>{ commitCnyFromString((e.target as HTMLInputElement).value); }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 右：信息区（与左侧明显分隔） */}
           {sliderBreakdown && (
-            <>
+            <div className="flex-1 sm:pl-4 sm:border-l sm:border-slate-200">
               {/* 桌面版：原有多行文本展示 */}
-              <div className="ml-2 text-sm hidden sm:block">
+              <div className="text-sm hidden sm:block">
                 <div>
                   利润率：{(sliderBreakdown.margin*100).toFixed(2)}% · 利润：₽ {(sliderBreakdown.profit_cny * rubPerCny).toFixed(2)} / ¥ {sliderBreakdown.profit_cny.toFixed(2)}
                 </div>
@@ -155,18 +204,18 @@ export default function PriceControlsBar({
                 </div>
               </div>
               {/* 移动版：四行列表展示 */}
-              <ul className="ml-2 text-sm list-disc list-inside space-y-0.5 sm:hidden">
+              <ul className="text-sm list-disc list-inside space-y-0.5 sm:hidden">
                 <li>利润率：{(sliderBreakdown.margin*100).toFixed(2)}%</li>
                 <li>利润：₽ {(sliderBreakdown.profit_cny * rubPerCny).toFixed(2)} / ¥ {sliderBreakdown.profit_cny.toFixed(2)}</li>
                 <li>货件分组：{activeGroup}</li>
                 <li>国际物流费（{carrierName(chartTriple.carrier)} / {chartTriple.tier} / {deliveryZh(chartTriple.delivery)}）：₽ {sliderBreakdown.intl_logistics_rub.toFixed(2)}</li>
               </ul>
               {demandModel !== 'none' && demandStats ? (
-                <div className="ml-2 text-xs text-slate-600 sm:hidden mt-1">
+                <div className="text-xs text-slate-600 sm:hidden mt-1">
                   销量（相对）：{demandStats.q_norm.toFixed(3)} · 总利润（相对，¥）：{demandStats.pi_norm_cny.toFixed(2)}
                 </div>
               ) : null}
-            </>
+            </div>
           )}
         </div>
         {dangerMessage && demandModel === 'none' && (

@@ -94,12 +94,11 @@ export default function ServiceRow({
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <h3 className="truncate font-medium leading-tight">{service.name}</h3>
-          <span className={`ml-2 font-medium ${service.available ? "text-green-600" : "text-red-600"}`}>{service.available ? "可寄" : "不可寄"}</span>
         </div>
-        <div className="mt-1 text-xs text-muted-foreground whitespace-normal break-words">
+        <div className={"mt-1 text-xs whitespace-normal break-words text-muted-foreground"}>
           {service.reason ? (
             <>
-              <div>{service.reason}</div>
+              <div className={service.available ? '' : 'text-red-600'}>{service.reason}</div>
             </>
           ) : mini ? (
             <>
@@ -129,8 +128,9 @@ export default function ServiceRow({
             </>
           )}
         </div>
-        <div className="mt-2">
+        <div className="mt-2 flex items-center gap-2">
           <span className="rounded bg-accent px-1.5 py-0.5 text-xs text-accent-foreground">{service.group}</span>
+          <span className={`text-xs ${service.available ? "text-green-600" : "text-red-600"}`}>{service.available ? "可寄" : "不可寄"}</span>
         </div>
       </div>
 

@@ -26,6 +26,7 @@ export default function HomePage() {
   // 售价（RUB）与商品成本（CNY）
   const [priceRubStr, setPriceRubStr] = useState<string>("1100");
   const [costCny, setCostCny] = useState<number>(66);
+  const [costCnyStr, setCostCnyStr] = useState<string>("66");
 
   // 费率参数（与 Partner Logistics 独立）
   const [commission, setCommission] = useState(0.12);
@@ -64,7 +65,10 @@ export default function HomePage() {
       if (raw) {
         const s = JSON.parse(raw || "{}");
         if (typeof s.priceRubStr === 'string') setPriceRubStr(s.priceRubStr);
-        if (typeof s.costCny === 'number') setCostCny(s.costCny);
+        if (typeof s.costCny === 'number') {
+          setCostCny(s.costCny);
+          setCostCnyStr(String(s.costCny));
+        }
         if (typeof s.commission === 'number') setCommission(s.commission);
         if (typeof s.acquiring === 'number') setAcquiring(s.acquiring);
         if (typeof s.fx === 'number') setFx(s.fx);
@@ -174,8 +178,17 @@ export default function HomePage() {
     }
   }, [selectedService?.id, selectedService?.reason, dims.l, dims.w, dims.h]);
 
-  // 汇率刷新（自动模式）
-  async function refreshFx() {
+  // 汇率刷新（每天仅一次）
+  async function refreshFxWithSource(source: 'auto' | 'manual') {
+    try {
+      const today = (()=>{ const d=new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; })();
+      const key = "rub_fx_last_refresh_date";
+      const last = localStorage.getItem(key);
+      if (last === today) {
+        if (source !== 'auto') alert("今日汇率已更新。为保证计算稳定，每日最多刷新 1 次。如需自定义汇率，请切换到手动模式输入。");
+        return;
+      }
+    } catch {}
     setLoadingFx(true);
     try {
       let ok = false;
@@ -206,13 +219,17 @@ export default function HomePage() {
           }
         }
       }
+      if (ok) {
+        try { const d=new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); localStorage.setItem("rub_fx_last_refresh_date", `${y}-${m}-${dd}`); } catch {}
+      }
     } finally {
       setLoadingFx(false);
     }
   }
+  async function refreshFx(){ return refreshFxWithSource('manual'); }
 
   useEffect(() => {
-    if (rubFxMode === 'auto') refreshFx();
+    if (rubFxMode === 'auto') refreshFxWithSource('auto');
   }, [rubFxMode]);
 
   const [profitOpen, setProfitOpen] = useState(false);
@@ -249,13 +266,23 @@ export default function HomePage() {
           <h2 className="mb-3 font-medium">售价与成本</h2>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <label className="text-sm w-16">售价(RUB)</label>
+              <label className="text-sm w-20 whitespace-nowrap">售价（RUB）</label>
               <input type="number" step="0.01" value={priceRubStr} onChange={(e)=>setPriceRubStr(e.target.value)} className="flex-1 rounded-md border px-3 py-2 text-sm" />
             </div>
-            <div className="text-xs text-muted-foreground">≈ ¥ {(rubPerCny>0? (parseFloat(priceRubStr||"0")/rubPerCny):0).toFixed(2)}</div>
             <div className="flex items-center gap-2">
-              <label className="text-sm w-16">成本(CNY)</label>
-              <input type="number" step="0.01" value={costCny} onChange={(e)=>setCostCny(Number(e.target.value)||0)} className="flex-1 rounded-md border px-3 py-2 text-sm" />
+              <label className="text-sm w-20 whitespace-nowrap">成本（CNY）</label>
+              <input
+                type="number"
+                step="0.01"
+                value={costCnyStr}
+                onChange={(e)=>{
+                  const v = e.target.value;
+                  setCostCnyStr(v);
+                  const n = parseFloat(v);
+                  setCostCny(Number.isFinite(n) ? n : 0);
+                }}
+                className="flex-1 rounded-md border px-3 py-2 text-sm"
+              />
             </div>
             <button type="button" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline" onClick={()=>setSettingsOpen(true)}>
               <Settings className="h-3.5 w-3.5"/> 更多设置
