@@ -1198,9 +1198,7 @@ export default function OzonPage() {
           <div className="space-y-3 text-sm">
             <div>
               <span className="text-muted-foreground">数据来源：</span>
-              <a href={DATA_SOURCE_URL} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline ml-1">
-                {DATA_SOURCE_URL}
-              </a>
+              <span className="ml-1">{DATA_SOURCE_URL}</span>
             </div>
             <div className="max-h-[60vh] overflow-auto">
               <div className="font-medium mb-1">各承运商数据时间</div>
