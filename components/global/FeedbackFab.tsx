@@ -1,11 +1,19 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { MessageSquare } from "lucide-react";
 
+// 环境变量开关（默认关闭）：设置 NEXT_PUBLIC_SHOW_FEEDBACK_FAB=1/true/on 可开启
+const SHOW_FAB: boolean = (() => {
+  const v = process.env.NEXT_PUBLIC_SHOW_FEEDBACK_FAB as string | undefined;
+  return v === "1" || v === "true" || v === "on";
+})();
+
 export default function FeedbackFab() {
+  if (!SHOW_FAB) return null;
   const [open, setOpen] = React.useState(false);
 
   return (
@@ -36,13 +44,9 @@ export default function FeedbackFab() {
           </ul>
         </div>
         <DialogFooter className="sm:justify-between">
-          <a
-            href="https://xixisys-group.mikecrm.com/YqMhORX"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <Link href="/feedback" onClick={() => setOpen(false)}>
             <Button className="w-full sm:w-auto">在线表单反馈</Button>
-          </a>
+          </Link>
           <a href="mailto:peter@xixisys.com">
             <Button variant="secondary" className="w-full sm:w-auto">邮件反馈</Button>
           </a>
