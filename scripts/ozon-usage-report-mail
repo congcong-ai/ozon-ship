@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# 每晚定时发送 ozon-ship 使用情况邮件（基于 msmtp）
+# 依赖：/usr/local/bin/ozon-usage-report（或 PATH 中可用的 ozon-usage-report）
+# 用法：直接执行；也可由 cron 调度
+# 可用环境变量覆盖：
+#   EMAIL_TO           收件人（默认：revival.wgj@gmail.com）
+#   EMAIL_FROM         发件人（默认："XiXisys System" <peter@reachlinked.com>）
+#   SUBJECT            邮件标题（默认：ozon-ship 使用情况）
+#   MSMTP_ACCOUNT      msmtp 账户名（默认：zoho）
+
+EMAIL_TO=${EMAIL_TO:-"revival.wgj@gmail.com"}
+EMAIL_FROM=${EMAIL_FROM:-"\"XiXisys System\" <peter@reachlinked.com>"}
+SUBJECT=${SUBJECT:-"ozon-ship 使用情况"}
+MSMTP_ACCOUNT=${MSMTP_ACCOUNT:-zoho}
+
+REPORT_FILE=$(mktemp)
+trap 'rm -f "$REPORT_FILE"' EXIT
+
+run_usage_report() {
+  local period=$1
+  # 依次尝试常见位置；若失败再尝试 sudo（非交互）
+  if command -v ozon-usage-report >/dev/null 2>&1; then
+    ozon-usage-report "$period" 2>&1 || rc=$?
+    if [[ ${rc:-0} -ne 0 ]]; then
+      sudo -n ozon-usage-report "$period" 2>&1 || true
+    fi
+  elif [ -x /usr/local/bin/ozon-usage-report ]; then
+    /usr/local/bin/ozon-usage-report "$period" 2>&1 || rc=$?
+    if [[ ${rc:-0} -ne 0 ]]; then
+      sudo -n /usr/local/bin/ozon-usage-report "$period" 2>&1 || true
+    fi
+  else
+    sudo -n ozon-usage-report "$period" 2>&1 || echo "[WARN] 无法执行 ozon-usage-report $period：命令不存在或权限不足。"
+  fi
+}
+
+{
+  run_usage_report today
+  echo
+  run_usage_report yesterday
+} > "$REPORT_FILE"
+
+# 发送邮件（msmtp）
+{
+  echo "From: $EMAIL_FROM"
+  echo "To: $EMAIL_TO"
+  echo "Subject: $SUBJECT"
+  echo "Content-Type: text/plain; charset=UTF-8"
+  echo "MIME-Version: 1.0"
+  echo
+  cat "$REPORT_FILE"
+} | msmtp -a "$MSMTP_ACCOUNT" "$EMAIL_TO"
+MAIL_RC=$?
+rm -f "$REPORT_FILE" 2>/dev/null || true
+
+if [[ $MAIL_RC -eq 0 ]]; then
+  echo "[OK] 邮件发送成功 -> $EMAIL_TO"
+else
+  echo "[ERR] 邮件发送失败 -> $EMAIL_TO" >&2
+  exit 1
+fi
